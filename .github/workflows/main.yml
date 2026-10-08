@@ -22,5 +22,8 @@ jobs:
           cmake --build build --parallel
       - name: Clang-format Check
         run: |
-          make check-format
+          make check-format --keep-going
+      - name: Clang-tidy Check
+        run: |
+          make check-tidy --keep-going
       - run: echo "🍏 This job's status is ${{ job.status }}."
