@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Wasm Sum Test</title>
+</head>
+<body>
+  <h2>WebAssembly Sum 运行结果（请按 F12 查看控制台）</h2>
+  <pre id="output"></pre>
+
+  <script>
+    const out = document.getElementById('output');
+    const appendLog = (msg) => {
+      out.textContent += msg + '\n';
+      console.log(msg);
+    };
+
+    const importObject = {
+      console: {
+        log: (val) => appendLog(`Wasm internal log: ${val}`)
+      }
+    };
+
+    // 使用流式加载实例化 wasm
+    WebAssembly.instantiateStreaming(fetch('sum.wasm'), importObject)
+      .then(({ instance }) => {
+        const { sum, exported_func } = instance.exports;
+        appendLog(`[Result] sum(5) = ${sum(5)}`);
+      })
+      .catch(err => appendLog('加载错误: ' + err));
+  </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+BUILD_DIR := @CMAKE_BINARY_DIR@
+MAKE_BIN := @CMAKE_MAKE_PROGRAM@
+
+.PHONY: all check check-format check-tidy clean distclean help
+
+all:
+	"$(MAKE_BIN)" -C "$(BUILD_DIR)" all
+
+check:
+	"$(MAKE_BIN)" -C "$(BUILD_DIR)" check
+
+check-format:
+	"$(MAKE_BIN)" -C "$(BUILD_DIR)" check-format
+
+check-tidy:
+	"$(MAKE_BIN)" -C "$(BUILD_DIR)" check-tidy
+
+clean:
+	"$(MAKE_BIN)" -C "$(BUILD_DIR)" clean
+
+distclean:
+	rm -rf "$(BUILD_DIR)"
+
+help:
+	@printf '%s\n' \
+		'make                 # 配置并编译全部程序' \
+		'make check-format    # 递归检查所有 .c/.h/.cpp/.hpp 的格式' \
+		'make check-tidy      # 递归运行 clang-tidy' \
+		'make check           # 同时执行以上两项检查' \
+		'make clean           # 清理构建产物' \
+		'make distclean       # 删除 build 目录' \
+		'make help'
