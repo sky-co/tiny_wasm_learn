@@ -1,0 +1,5 @@
+.vscode/
+*.wasm
+build/
+Makefile
+.cache/
