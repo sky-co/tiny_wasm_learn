@@ -13,7 +13,7 @@ jobs:
       - name: Install CI dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes clang-format gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+          sudo apt-get install --yes clang-format clang-tidy gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
       - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
       - run: echo "🖥️ The workflow is now ready to test your code on the runner."
       - name: Compile src code
@@ -21,9 +21,20 @@ jobs:
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCLANG_TIDY=
           cmake --build build --parallel
       - name: Clang-format Check
+        id: clang_format
+        continue-on-error: true
         run: |
           make check-format --keep-going
       - name: Clang-tidy Check
+        id: clang_tidy
+        if: ${{ always() }}
+        continue-on-error: true
         run: |
           make check-tidy --keep-going
+      - name: Fail if checks failed
+        if: ${{ always() && (steps.clang_format.outcome == 'failure' || steps.clang_tidy.outcome == 'failure') }}
+        run: |
+          echo "clang-format outcome: ${{ steps.clang_format.outcome }}"
+          echo "clang-tidy outcome: ${{ steps.clang_tidy.outcome }}"
+          exit 1
       - run: echo "🍏 This job's status is ${{ job.status }}."
