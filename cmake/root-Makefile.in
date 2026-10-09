@@ -30,7 +30,7 @@ help:
 		'make check-format    # 递归检查所有 .c/.h/.cpp/.hpp 的格式' \
 		'make check-tidy      # 递归运行 clang-tidy' \
 		'make check-asan      # 用 AddressSanitizer 运行本机程序' \
-		'make check           # 同时执行格式检查和 clang-tidy' \
+		'make check           # 同时执行格式检查 clang-tidy和clang-asan ' \
 		'make clean           # 清理构建产物' \
 		'make distclean       # 删除 build 目录' \
 		'make help'

@@ -18,7 +18,7 @@ jobs:
       - run: echo "🖥️ The workflow is now ready to test your code on the runner."
       - name: Compile src code
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCLANG_TIDY=
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
           cmake --build build --parallel
       - name: Clang-format Check
         id: clang_format

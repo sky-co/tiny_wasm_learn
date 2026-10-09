@@ -14,19 +14,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 find_program(CLANG_FORMAT NAMES clang-format-19 clang-format)
+# An empty cache entry (for example from -DCLANG_TIDY=) hides a later install.
+if(NOT CLANG_TIDY)
+    unset(CLANG_TIDY CACHE)
+endif()
 find_program(CLANG_TIDY NAMES clang-tidy clang-tidy-19 clang-tidy-18)
 find_program(AARCH64_GCC NAMES aarch64-linux-gnu-gcc)
 find_program(ARM32_GCC NAMES arm-linux-gnueabihf-gcc)
-
-# Code static checker. Reference: Chapter01/Target.md.
-# The header filter covers this repository and its subdirectories; the sample
-# src|tests pattern does not match the current layout.
-if(CLANG_TIDY)
-    set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY} --config-file ${CMAKE_CURRENT_LIST_DIR}/.clang-tidy "--header-filter=${CMAKE_CURRENT_LIST_DIR}/.*")
-    set(CMAKE_C_CLANG_TIDY ${CMAKE_CXX_CLANG_TIDY})
-else()
-    message(WARNING "Code static checker disabled: clang-tidy was not found")
-endif()
 
 # Code dynamic checker. Reference: Chapter01/Target.md.
 # Linker flags are required so AddressSanitizer is actually linked.
@@ -190,7 +184,7 @@ add_custom_target(check-asan
 )
 
 add_custom_target(clang-tidy DEPENDS check-tidy)
-add_custom_target(check DEPENDS check-format check-tidy)
+add_custom_target(check DEPENDS check-format check-tidy check-asan)
 
 configure_file(
     ${CMAKE_CURRENT_LIST_DIR}/cmake/root-Makefile.in
