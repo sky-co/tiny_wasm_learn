@@ -59,7 +59,11 @@ class ByteReader {
 
   private:
     uint8_t ReadU8() {
-        return bytes_[pos_++];
+        int8_t res = 0;
+        if (pos_ < bytes_.size()) {
+            res = static_cast<int8_t>(bytes_[pos_++]);
+        }
+        return res;
     }
 
     void PrintHexByte(uint8_t value) const {
