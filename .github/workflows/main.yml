@@ -31,10 +31,18 @@ jobs:
         continue-on-error: true
         run: |
           make check-tidy --keep-going
+      - name: Clang-ASan Check
+        id: clang_asan
+        if: ${{ always() }}
+        continue-on-error: true
+        run: |
+          make check-asan --keep-going
       - name: Fail if checks failed
-        if: ${{ always() && (steps.clang_format.outcome == 'failure' || steps.clang_tidy.outcome == 'failure') }}
+        if: ${{ always() && (steps.clang_format.outcome == 'failure' || steps.clang_tidy.outcome == 'failure' ||
+            steps.clang_asan.outcome == 'failure') }}
         run: |
           echo "clang-format outcome: ${{ steps.clang_format.outcome }}"
           echo "clang-tidy outcome: ${{ steps.clang_tidy.outcome }}"
+          echo "clang_asan outcome: ${{ steps.clang_asan.outcome }}"
           exit 1
       - run: echo "🍏 This job's status is ${{ job.status }}."

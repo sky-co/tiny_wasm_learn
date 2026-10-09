@@ -175,6 +175,20 @@ else()
     )
 endif()
 
+# Runs the host programs built with the AddressSanitizer flags above.
+add_custom_target(check-asan
+    COMMAND ${CMAKE_COMMAND} -E env
+        ASAN_OPTIONS=halt_on_error=1:detect_leaks=1:abort_on_error=1
+        $<TARGET_FILE:hello>
+    COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_SOURCE_DIR}/Chapter01"
+        ${CMAKE_COMMAND} -E env
+        ASAN_OPTIONS=halt_on_error=1:detect_leaks=1:abort_on_error=1
+        $<TARGET_FILE:parse_wasm>
+    DEPENDS hello parse_wasm
+    COMMENT "Running Code dynamic checker (AddressSanitizer)"
+    VERBATIM
+)
+
 add_custom_target(clang-tidy DEPENDS check-tidy)
 add_custom_target(check DEPENDS check-format check-tidy)
 
