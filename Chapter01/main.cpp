@@ -1,6 +1,6 @@
 #include <cstdint>
-#include <cstdio>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -31,7 +31,7 @@ class ByteReader {
             const uint8_t section_id = ReadU8();
             // cout << "Parse section: " << ReadString() << endl;
             const uint32_t payload_size = ReadU32Leb128();
-            printf("section id = %u, payload size = %u\n", section_id, payload_size);
+            cout << "section id = " << static_cast<unsigned>(section_id) << ", payload size = " << payload_size << '\n';
 
             switch (section_id) {
             case 1:
@@ -62,70 +62,79 @@ class ByteReader {
         return bytes_[pos_++];
     }
 
+    void PrintHexByte(uint8_t value) const {
+        cout << hex << setfill('0') << setw(2) << static_cast<unsigned>(value) << dec << ' ';
+    }
+
     uint32_t ReadU32Leb128() {
         uint32_t result = 0;
-        uint8_t shift = 0;
-        uint8_t byte = 0;
+        uint32_t shift = 0;
+        uint32_t bits = 0;
         do {
-            byte = ReadU8();
-            result |= (byte & 0x7f) << shift; /* low-order 7 bits of byte */
+            bits = ReadU8();
+            result |= (bits & 0x7FU) << shift; /* low-order 7 bits of byte */
             shift += 7;
-        } while ((byte & 0x80) != 0); /* get high-order bit of byte */
+        } while ((bits & 0x80U) != 0); /* get high-order bit of byte */
 
         return result;
     }
 
     void ParseTypeSection(const uint32_t payload_size) {
         for (uint32_t i = 0; i < payload_size; ++i) {
-            printf("%02x ", ReadU8());
+            PrintHexByte(ReadU8());
         }
-        printf("\n");
+        cout << '\n';
     }
 
     void ParseFunctionSection(const uint32_t payload_size) {
         for (uint32_t i = 0; i < payload_size; ++i) {
-            printf("%02x ", ReadU8());
+            PrintHexByte(ReadU8());
         }
-        printf("\n");
+        cout << '\n';
     }
 
     void ParseExportSection(const uint32_t payload_size) {
         for (uint32_t i = 0; i < payload_size; ++i) {
-            printf("%02x ", ReadU8());
+            PrintHexByte(ReadU8());
         }
-        printf("\n");
+        cout << '\n';
     }
 
     void ParseCodeSection(const uint32_t payload_size) {
-        if (payload_size <= 0)
+        if (payload_size <= 0) {
             return;
+        }
 
-        uint8_t fun_cnt = ReadU8();
-        printf("Function count: %d \n", fun_cnt);
+        const uint8_t fun_cnt = ReadU8();
+        cout << "Function count: " << static_cast<unsigned>(fun_cnt) << " \n";
         if (fun_cnt > 0) {
-            uint8_t bd_sz = ReadU8();
-            printf("Function body size: %d \n", bd_sz);
+            const uint8_t bd_sz = ReadU8();
+            cout << "Function body size: " << static_cast<unsigned>(bd_sz) << " \n";
             if (bd_sz > 0) {
-                uint8_t loc_decl_cnt = ReadU8();
-                printf("Function local decl count: %d \n", bd_sz);
-                printf("Function opcode: %02x \n", ReadU8());
-                uint8_t op_code = ReadU8();
-                printf("Function opcode: %02x \n", op_code);
+                const uint8_t loc_decl_cnt = ReadU8();
+                cout << "Function local decl count: " << static_cast<unsigned>(loc_decl_cnt) << " \n";
+                cout << "Function opcode: ";
+                PrintHexByte(ReadU8());
+                cout << '\n';
+                const uint8_t op_code = ReadU8();
+                cout << "Function opcode: ";
+                PrintHexByte(op_code);
+                cout << '\n';
             }
         }
     }
 
     void SkipBytes() {
         for (uint32_t i = Position(); i < bytes_.size(); ++i) {
-            printf("%02x ", ReadU8());
+            PrintHexByte(ReadU8());
         }
-        printf("\n");
+        cout << '\n';
     }
 
     string ReadString() {
         const uint32_t length = ReadU32Leb128();
         cout << "payload size: " << length << endl;
-        std::string result = "";
+        std::string result;
 
         for (uint32_t i = 0; i < length; ++i) {
             result += std::to_string(ReadU8()) + " ";
@@ -141,16 +150,17 @@ class ByteReader {
 };
 
 void ParseWasm(const string file_path) {
-    if (file_path.empty())
+    if (file_path.empty()) {
         return;
+    }
 
     ifstream file(file_path, ios::binary);
-    if (!file.is_open())
+    if (!file.is_open()) {
         cout << "failed to open " << file_path << '\n';
-    else {
+    } else {
         cout << "Open " << file_path << "..." << '\n';
         // Parse wasm code here
-        vector<uint8_t> stream{istreambuf_iterator<char>(file), istreambuf_iterator<char>()};
+        const vector<uint8_t> stream{istreambuf_iterator<char>(file), istreambuf_iterator<char>()};
         ByteReader br(stream);
         br.ParseHeader();
         br.ParseSections();
