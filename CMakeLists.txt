@@ -148,7 +148,7 @@ if(CLANG_TIDY)
         list(APPEND tidy_commands
             COMMAND ${CLANG_TIDY}
                 --config-file=${CMAKE_SOURCE_DIR}/.clang-tidy
-                --header-filter=${CMAKE_SOURCE_DIR}/.*
+                "--header-filter=${CMAKE_SOURCE_DIR}/(?!.*json\\.hpp$$).*"
                 ${source}
                 --
                 ${tidy_standard}
