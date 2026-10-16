@@ -1,0 +1,76 @@
+Compile
+
+### Convert the local.wast to wasm and json with wast2json
+wast2json: https://github.com/WebAssembly/wabt/blob/main/docs/wast2json.md
+
+```
+$ wast2json local.wast -o local.json
+```
+
+### Debug with aarch64-lin
+```shell
+$ sudo apt install -y g++-aarch64-linux-gnu
+$ aarch64-linux-gnu-g++ -Wall -Wextra -O0 -g new_main.cpp byte_reader.hpp ../com/nlohmann/json.hpp -o assert_wasm
+$ qemu-aarch64 -L /usr/aarch64-linux-gnu ./assert_wasm
+
+$ qemu-aarch64 -g 2345 -L /usr/aarch64-linux-gnu ./assert_wasm
+vscode debug
+```
+
+### wasm-objdump -x 会列出 type、function、export、code
+```shell
+wasm-objdump -d -x local.0.wasm
+wasm2wat local.0.wasm
+```
+在线查看
+https://webassembly.github.io/wabt/demo/wat2wasm/
+
+#### 常见命令
+`wasm2wat、wasm-objdump -d` 把二进制 opcode 还原成 Wasm 文本，例如 local.get 0。它们不会生成 Arm64。
+aarch64-linux-gnu-as、armconverter、shell-storm 只做反向的事：把你已经写好的 ldr x1, [x0] 编成机器码。
+
+
+echo 'mov rax, [rdi]' | as -o /tmp/t.o --64 && objdump -d /tmp/t.o
+echo 'ldr x1, [x0]' | aarch64-linux-gnu-as -o /tmp/t.o && aarch64-linux-gnu-objdump -d /tmp/t.o
+
+
+### 小结
+- Wasm 的槽位顺序是先参数、后局部变量。
+- ldr x1, [x0, #pimm] 的不同写法。index 是 Wasm 槽下标，pimm 是它对应的字节偏移。
+- pimm 是汇编里写出来的字节偏移，不是槽下标：
+```
+imm12     = index
+pimm      = index * 8
+pimm / 8  = index
+```
+local.get 0 时，index 是 0，所以 pimm 是 0，pimm / 8 也是 0。指令是 ldr x1, [x0, #0]。local.get 2 时，index 是 2，pimm 是 16，pimm / 8 是 2。指令是 ldr x1, [x0, #16]，读取的是 locals[2]。
+
+- Wasm 1.0 里常见的类型字节是：
+字节	类型
+7f	i32
+7e	i64
+7d	f32
+7c	f64
+
+-  opc 在第 30–29 位，决定这条 wide-move 是先清零还是保留原值。
+opc	指令	效果
+10	MOVZ	先把整个寄存器清成 0，再写入这 16 位
+11	MOVK	其余位保持不变，只改 hw 指向的那 16 位
+
+- 机器码里不直接存这个移位量，而是存 hw = shift / 16：
+汇编	hw
+省略，或 LSL #0	00
+LSL #16	01
+LSL #32	10
+LSL #48	11
+所以 movz x1, #0 的移位是 0，hw 也是 0。EmitMovX1Imm 里 hw 从 0 走到 3，就是在选这四个槽；imm >>= 16 则是每次取出下一个槽里的 16 位。
+
+- 映射都是这个思路：
+Wasm	含义	AArch64
+local.get n	读第 n 个槽，压栈	ldr x1, [x0, #n*8]，再 sub sp, sp, #16；str x1, [sp]
+local.set n	弹栈，写入第 n 个槽	ldr x1, [sp]；add sp, sp, #16；str x1, [x0, #n*8]
+local.tee n	栈顶写入第 n 个槽，但不弹	ldr x1, [sp]；str x1, [x0, #n*8]
+i32.const 0 / i64.const 0	把常数压栈	movz x1, #0，再压栈
+end，有返回值	弹栈作为返回值	ldr x0, [sp]；add sp, sp, #16；ret
+end，无返回值	返回 0	mov x0, xzr；ret
+n 是槽下标，不是字节偏移。local.get 0 是 [x0]，local.get 1 是 [x0, #8]，local.get 2 是 [x0, #16]。
