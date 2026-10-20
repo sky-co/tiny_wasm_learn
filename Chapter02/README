@@ -14,7 +14,7 @@ $ aarch64-linux-gnu-g++ -Wall -Wextra -O0 -g new_main.cpp byte_reader.hpp ../com
 $ qemu-aarch64 -L /usr/aarch64-linux-gnu ./assert_wasm
 
 $ qemu-aarch64 -g 2345 -L /usr/aarch64-linux-gnu ./assert_wasm
-vscode debug
+vscode debug(F5)
 ```
 
 ### wasm-objdump -x 会列出 type、function、export、code
@@ -24,6 +24,16 @@ wasm2wat local.0.wasm
 ```
 在线查看
 https://webassembly.github.io/wabt/demo/wat2wasm/
+
+
+### 槽
+slots 是宿主与 JIT 机器码共享的局部变量区：
+```
+slots[0 .. 参数数量-1]              Wasm 参数
+slots[参数数量 .. slot_count-1]     Wasm local 变量
+```
+即使函数没有参数和 local，也分配一个元素，保证 slots.data() 有有效地址。
+
 
 #### 常见命令
 `wasm2wat、wasm-objdump -d` 把二进制 opcode 还原成 Wasm 文本，例如 local.get 0。它们不会生成 Arm64。

@@ -17,9 +17,14 @@
 using namespace std;
 // using json = nlohmann::json;
 
+enum class WasmValueType : uint8_t {
+    I32 = 0x7FU,
+    I64 = 0x7EU,
+};
+
 struct FuncType {
-    uint32_t param_count = 0;
-    uint32_t result_count = 0;
+    vector<WasmValueType> params;
+    vector<WasmValueType> results;
 };
 
 struct ExpFunc {
@@ -37,8 +42,8 @@ struct Instruction {
 struct CompiledFunctions {
     string name;
     uint32_t decl_cnt = 0;
-    uint32_t param_count = 0;
-    uint32_t result_count = 0;
+    vector<WasmValueType> params;
+    vector<WasmValueType> results;
     vector<Instruction> body;
 };
 
@@ -148,17 +153,15 @@ class ByteReader {
             if (ReadU8() == 0x60) {
                 const uint32_t param_count = ReadU32Leb128();
                 for (uint32_t param = 0; param < param_count; ++param) {
-                    ReadU8();
+                    func_type.params.push_back(static_cast<WasmValueType>(ReadU8()));
                 }
                 const uint32_t result_count = ReadU32Leb128();
                 for (uint32_t result = 0; result < result_count; ++result) {
-                    ReadU8();
+                    func_type.results.push_back(static_cast<WasmValueType>(ReadU8()));
                 }
-                func_type.param_count = param_count;
-                func_type.result_count = result_count;
             }
             types_.push_back(func_type);
-            cout << "  type " << i << " params " << func_type.param_count << " results " << func_type.result_count << '\n';
+            cout << "  type " << i << " params " << func_type.params.size() << " results " << func_type.results.size() << '\n';
         }
         SkipTo(section_end);
     }
@@ -171,8 +174,8 @@ class ByteReader {
         for (uint32_t i = 0; i < func_nums; ++i) {
             const uint32_t type_index = ReadU32Leb128();
             if (type_index < types_.size()) {
-                functions_[i].param_count = types_[type_index].param_count;
-                functions_[i].result_count = types_[type_index].result_count;
+                functions_[i].params = types_[type_index].params;
+                functions_[i].results = types_[type_index].results;
             }
         }
 
