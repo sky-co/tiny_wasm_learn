@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug arm64",
+            "name": "Debug Arm64",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/Chapter02/assert_wasm",
