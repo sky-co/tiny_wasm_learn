@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(wasm_learn LANGUAGES C CXX)
 
+include(CTest)
+
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
@@ -34,6 +36,16 @@ add_compile_options(-Wall -Wextra)
 # Host programs. Binaries are written to the CMake build directory.
 add_executable(hello Chapter00/hello.c)
 add_executable(parse_wasm Chapter01/main.cpp)
+
+if(BUILD_TESTING)
+    add_test(
+        NAME chapter02_arm64_gtest
+        COMMAND bash ${CMAKE_SOURCE_DIR}/Chapter02/run_arm64_test.sh
+    )
+    set_tests_properties(chapter02_arm64_gtest PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+endif()
 
 function(add_cross_program target compiler)
     cmake_parse_arguments(ARG "" "" "SOURCES;FLAGS" ${ARGN})

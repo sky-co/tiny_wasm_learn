@@ -13,13 +13,15 @@ jobs:
       - name: Install CI dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes clang-format clang-tidy gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+          sudo apt-get install --yes clang-format clang-tidy gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf libgtest-dev qemu-user wabt
       - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
       - run: echo "🖥️ The workflow is now ready to test your code on the runner."
       - name: Compile src code
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
           cmake --build build --parallel
+      - name: Run Chapter02 Arm64 gtest
+        run: ctest --test-dir build --output-on-failure -R chapter02_arm64_gtest
       - name: Clang-format Check
         id: clang_format
         continue-on-error: true
