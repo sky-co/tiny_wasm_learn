@@ -93,7 +93,7 @@ int32_t popcntll(uint64_t const mask) VB_NOEXCEPT;
 /// @brief Literal suffix for explicit initialization of a uint8_t
 ///
 // NOLINTNEXTLINE(google-runtime-int)
-inline constexpr uint8_t operator""_U8(const unsigned long long arg)VB_NOEXCEPT {
+inline constexpr uint8_t operator""_U8(const unsigned long long arg) VB_NOEXCEPT {
     return static_cast<uint8_t>(arg);
 }
 
@@ -101,7 +101,7 @@ inline constexpr uint8_t operator""_U8(const unsigned long long arg)VB_NOEXCEPT 
 /// @brief Literal suffix for explicit initialization of a uint32_t
 ///
 // NOLINTNEXTLINE(google-runtime-int)
-inline constexpr uint32_t operator""_U32(const unsigned long long arg)VB_NOEXCEPT {
+inline constexpr uint32_t operator""_U32(const unsigned long long arg) VB_NOEXCEPT {
     return static_cast<uint32_t>(arg);
 }
 
@@ -109,7 +109,7 @@ inline constexpr uint32_t operator""_U32(const unsigned long long arg)VB_NOEXCEP
 /// @brief Literal suffix for explicit initialization of a uint64_t
 ///
 // NOLINTNEXTLINE(google-runtime-int)
-inline constexpr uint64_t operator""_U64(const unsigned long long arg)VB_NOEXCEPT {
+inline constexpr uint64_t operator""_U64(const unsigned long long arg) VB_NOEXCEPT {
     return static_cast<uint64_t>(arg);
 }
 
