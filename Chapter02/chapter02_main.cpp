@@ -145,14 +145,14 @@ class ExecutableBuffer {
 
     bool Allocate(size_t bytes) {
         Release();
-        const long page_size = sysconf(_SC_PAGESIZE);
+        const auto page_size = sysconf(_SC_PAGESIZE);
         if (page_size <= 0 || bytes == 0U) {
             return false;
         }
 
         const size_t page = static_cast<size_t>(page_size);
         size_ = ((bytes + page - 1U) / page) * page;
-        void *mem = mmap(nullptr, size_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        void *const mem = mmap(nullptr, size_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (mem == MAP_FAILED) {
             size_ = 0;
             return false;
@@ -169,7 +169,7 @@ class ExecutableBuffer {
             return nullptr;
         }
 
-        uint8_t *entry = data_ + aligned;
+        uint8_t *const entry = data_ + aligned;
         memcpy(entry, machine.data(), machine.size());
         used_ = aligned + machine.size();
         return entry;
@@ -179,7 +179,7 @@ class ExecutableBuffer {
         if (data_ == nullptr || mprotect(data_, size_, PROT_READ | PROT_EXEC) != 0) {
             return false;
         }
-        char *start = reinterpret_cast<char *>(data_);
+        char *const start = static_cast<char *>(static_cast<void *>(data_));
         __builtin___clear_cache(start, start + size_);
         return true;
     }
@@ -224,9 +224,9 @@ void AppendByte(vector<uint8_t> &out, uint8_t value) {
 
 void AppendWord(vector<uint8_t> &out, uint32_t word) {
     AppendByte(out, static_cast<uint8_t>(word & 0xFFU));
-    AppendByte(out, static_cast<uint8_t>((word >> 8) & 0xFFU));
-    AppendByte(out, static_cast<uint8_t>((word >> 16) & 0xFFU));
-    AppendByte(out, static_cast<uint8_t>((word >> 24) & 0xFFU));
+    AppendByte(out, static_cast<uint8_t>((word >> 8U) & 0xFFU));
+    AppendByte(out, static_cast<uint8_t>((word >> 16U) & 0xFFU));
+    AppendByte(out, static_cast<uint8_t>((word >> 24U) & 0xFFU));
 }
 
 void EmitLoadLocal(vector<uint8_t> &out, uint32_t index) {
@@ -329,7 +329,7 @@ void BindJITTable(const vector<ExpFunc> &exp, const vector<CompiledFunctions> &c
 
     module.entries.resize(machine.size());
     for (size_t i = 0; i < machine.size(); ++i) {
-        uint8_t *entry = module.code.Emit(machine[i]);
+        uint8_t *const entry = module.code.Emit(machine[i]);
         if (entry == nullptr) {
             cout << "failed to emit JIT entry for function " << i << '\n';
             continue;
@@ -337,7 +337,7 @@ void BindJITTable(const vector<ExpFunc> &exp, const vector<CompiledFunctions> &c
         module.entries[i].params = module.functions[i].params;
         module.entries[i].results = module.functions[i].results;
         module.entries[i].slot_count = static_cast<uint32_t>(module.functions[i].params.size()) + module.functions[i].decl_cnt;
-        module.entries[i].entry = reinterpret_cast<JitEntry>(entry);
+        module.entries[i].entry = reinterpret_cast<JitEntry>(entry); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
     }
     for (const ExpFunc &item : exp) {
         if (item.kind == 0U && item.idx < module.entries.size()) {
@@ -434,5 +434,5 @@ int main() {
         res &= RunAssert(cmd.ls[i], com[i]);
     }
 
-    return res == true ? 0 : 1;
+    return res ? 0 : 1;
 }
