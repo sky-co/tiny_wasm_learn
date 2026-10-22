@@ -22,11 +22,6 @@ jobs:
           cmake --build build --parallel
       - name: Run Chapter02 Arm64 gtest
         run: ctest --test-dir build --output-on-failure -R chapter02_arm64_gtest
-      - name: Clang-format Check
-        id: clang_format
-        continue-on-error: true
-        run: |
-          make check-format --keep-going
       - name: Clang-tidy Check
         id: clang_tidy
         if: ${{ always() }}
@@ -39,6 +34,11 @@ jobs:
         continue-on-error: true
         run: |
           make check-asan --keep-going
+      - name: Clang-format Check
+        id: clang_format
+        continue-on-error: true
+        run: |
+          make check-format --keep-going
       - name: Fail if checks failed
         if: ${{ always() && (steps.clang_format.outcome == 'failure' || steps.clang_tidy.outcome == 'failure' ||
             steps.clang_asan.outcome == 'failure') }}
