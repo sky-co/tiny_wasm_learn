@@ -10,12 +10,23 @@ $ wast2json local.wast -o local.json
 ### Debug with aarch64-lin
 ```shell
 $ sudo apt install -y g++-aarch64-linux-gnu
-$ aarch64-linux-gnu-g++ -Wall -Wextra -O0 -g chapter02_main.cpp byte_reader.hpp ../com/nlohmann/json.hpp -o assert_wasm
+$ aarch64-linux-gnu-g++ -std=c++17 -Wall -Wextra -O0 -g chapter02_main.cpp -o assert_wasm
 $ qemu-aarch64 -L /usr/aarch64-linux-gnu ./assert_wasm
 
 $ qemu-aarch64 -g 2345 -L /usr/aarch64-linux-gnu ./assert_wasm
 vscode debug(F5)
 ```
+
+### Build and test from the repository root
+```shell
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --target assert_wasm
+ctest --test-dir build --output-on-failure -R chapter02_arm64_gtest
+```
+
+The test script generates Wasm fixtures in the build directory, then builds and
+runs both the command-line program and GoogleTest under QEMU. Chapter02 uses the
+shared types, JSON reader, Wasm parser, executable buffer and JIT helpers in `com`.
 
 ### wasm-objdump -x 会列出 type、function、export、code
 ```shell

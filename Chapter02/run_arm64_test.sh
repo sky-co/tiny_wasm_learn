@@ -31,6 +31,11 @@ build_dir="$(cd "$build_dir" && pwd)"
 wast2json "$root_dir/Chapter02/local.wast" -o "$build_dir/local.json"
 
 "$aarch64_cxx" \
+    -std=c++17 -Wall -Wextra -O0 -g \
+    "$root_dir/Chapter02/chapter02_main.cpp" \
+    -o "$build_dir/assert_wasm"
+
+"$aarch64_cxx" \
     -std=c++17 -Wall -Wextra -O0 -g -pthread \
     -I"$gtest_source_dir/googletest/include" \
     -I"$gtest_source_dir/googletest" \
@@ -41,5 +46,6 @@ wast2json "$root_dir/Chapter02/local.wast" -o "$build_dir/local.json"
 
 (
     cd "$build_dir"
+    "$qemu_aarch64" -L "$aarch64_sysroot" "$build_dir/assert_wasm"
     "$qemu_aarch64" -L "$aarch64_sysroot" "$build_dir/wasm_chapter02_test"
 )

@@ -1,47 +1,10 @@
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <fstream>
+#pragma once
+
 #include <iomanip>
 #include <iostream>
-#include <iterator>
-#include <string>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <vector>
 
-#include "../com/nlohmann/json.hpp"
-
-enum class WasmValueType : uint8_t {
-    I32 = 0x7FU,
-    I64 = 0x7EU,
-};
-
-struct FuncType {
-    std::vector<WasmValueType> params;
-    std::vector<WasmValueType> results;
-};
-
-struct ExpFunc {
-    std::string name;
-    uint32_t kind = 0;
-    uint32_t idx = 0;
-};
-
-struct Instruction {
-    uint8_t opcode = 0;
-    uint32_t index = 0;
-    int64_t immediate = 0;
-};
-
-struct CompiledFunctions {
-    std::string name;
-    uint32_t decl_cnt = 0;
-    std::vector<WasmValueType> params;
-    std::vector<WasmValueType> results;
-    std::vector<Instruction> body;
-};
+#include "data_types.hpp"
 
 class ByteReader {
   public:

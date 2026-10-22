@@ -22,6 +22,7 @@ if(NOT CLANG_TIDY)
 endif()
 find_program(CLANG_TIDY NAMES clang-tidy clang-tidy-19 clang-tidy-18)
 find_program(AARCH64_GCC NAMES aarch64-linux-gnu-gcc)
+find_program(AARCH64_GXX NAMES aarch64-linux-gnu-g++)
 find_program(ARM32_GCC NAMES arm-linux-gnueabihf-gcc)
 
 # Code dynamic checker. Reference: Chapter01/Target.md.
@@ -48,7 +49,7 @@ if(BUILD_TESTING)
 endif()
 
 function(add_cross_program target compiler)
-    cmake_parse_arguments(ARG "" "" "SOURCES;FLAGS" ${ARGN})
+    cmake_parse_arguments(ARG "" "" "SOURCES;FLAGS;DEPENDS" ${ARGN})
     if(NOT compiler)
         message(FATAL_ERROR "Compiler for target '${target}' was not found")
     endif()
@@ -61,7 +62,7 @@ function(add_cross_program target compiler)
         OUTPUT "${output}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/bin"
         COMMAND "${compiler}" ${ARG_FLAGS} ${ARG_SOURCES} -o "${output}"
-        DEPENDS ${ARG_SOURCES}
+        DEPENDS ${ARG_SOURCES} ${ARG_DEPENDS}
         COMMENT "Building ${target}"
         VERBATIM
     )
@@ -72,6 +73,13 @@ set(AARCH64_C_FLAGS -Wall -Wextra -O0 -g)
 set(AARCH64_ASM_FLAGS -Wall -Wextra -O0 -g -nostdlib -static)
 set(ARM32_C_FLAGS -Wall -Wextra -O0 -g)
 set(ARM32_ASM_FLAGS -Wall -Wextra -O0 -g -nostdlib -static)
+
+file(GLOB CHAPTER02_HEADERS CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/com/*.hpp")
+add_cross_program(assert_wasm ${AARCH64_GXX}
+    SOURCES ${CMAKE_SOURCE_DIR}/Chapter02/chapter02_main.cpp
+    FLAGS -std=c++17 ${AARCH64_C_FLAGS}
+    DEPENDS ${CHAPTER02_HEADERS} ${CMAKE_SOURCE_DIR}/com/nlohmann/json.hpp
+)
 
 add_cross_program(mmap ${AARCH64_GCC}
     SOURCES ${CMAKE_SOURCE_DIR}/Chapter01/mmap_main.c
@@ -133,9 +141,9 @@ file(GLOB_RECURSE WASM_LEARN_CHECK_SOURCES CONFIGURE_DEPENDS
 )
 list(FILTER WASM_LEARN_CHECK_SOURCES EXCLUDE REGEX "^${CMAKE_BINARY_DIR}/")
 list(FILTER WASM_LEARN_CHECK_SOURCES EXCLUDE REGEX "/(build|\\.git)/")
+list(FILTER WASM_LEARN_CHECK_SOURCES EXCLUDE REGEX "^${CMAKE_SOURCE_DIR}/com/nlohmann/")
 
 set(WASM_LEARN_FORMAT_SOURCES ${WASM_LEARN_CHECK_SOURCES})
-list(FILTER WASM_LEARN_FORMAT_SOURCES EXCLUDE REGEX "^${CMAKE_SOURCE_DIR}/com/nlohmann/")
 
 if(CLANG_FORMAT)
     add_custom_target(check-format
@@ -154,8 +162,11 @@ else()
 endif()
 
 if(CLANG_TIDY)
+    set(WASM_LEARN_TIDY_SOURCES ${WASM_LEARN_CHECK_SOURCES})
+    # This unused upstream excerpt requires src/config.hpp from its original project.
+    list(FILTER WASM_LEARN_TIDY_SOURCES EXCLUDE REGEX "^${CMAKE_SOURCE_DIR}/com/util\\.hpp$")
     set(tidy_commands)
-    foreach(source ${WASM_LEARN_CHECK_SOURCES})
+    foreach(source ${WASM_LEARN_TIDY_SOURCES})
         if(source MATCHES "\\.cpp$|\\.hpp$")
             set(tidy_standard -std=c++17)
         else()
@@ -164,7 +175,7 @@ if(CLANG_TIDY)
         list(APPEND tidy_commands
             COMMAND ${CLANG_TIDY}
                 --config-file=${CMAKE_SOURCE_DIR}/.clang-tidy
-                "--header-filter=${CMAKE_SOURCE_DIR}/(?!.*json\\.hpp$$).*"
+                "--header-filter=${CMAKE_SOURCE_DIR}/(Chapter[^/]+|com)/[^/]+\\.(h|hpp)$"
                 ${source}
                 --
                 ${tidy_standard}
