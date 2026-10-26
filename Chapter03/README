@@ -1,0 +1,120 @@
+Compile
+
+## Convert the local.wast to wasm and json with wast2json
+wast2json: https://github.com/WebAssembly/wabt/blob/main/docs/wast2json.md
+
+```
+$ wast2json arithmetic.wast -o arithm.json
+```
+
+## Debug with aarch64-lin
+```shell
+$ aarch64-linux-gnu-g++ -std=c++17 -Wall -Wextra -O0 -g chapter03_main.cpp -o arithm
+$ qemu-aarch64 -L /usr/aarch64-linux-gnu ./arithm
+
+$ qemu-aarch64 -g 2345 -L /usr/aarch64-linux-gnu ./arithm
+vscode debug(F5)
+```
+
+## wasm-objdump -x 会列出 type、function、export、code
+```shell
+wasm-objdump -d -x arithm.0.wasm
+wasm2wat arithm.0.wasm
+```
+在线查看
+https://webassembly.github.io/wabt/demo/wat2wasm/
+
+
+## Tooling
+Godbolt with o2 https://godbolt.org/z/savM86h3r
+
+## Tips
+- i32.sub 使用 w 寄存器执行 32 位减法，溢出按低 32 位回绕，符合 i32.sub 的语义
+- i32.mul 只保留乘积的低 32 位，溢出不触发异常；mul w0, w0, w1 正好符合这一语义。有符号和无符号乘法的低 32 位相同，因此不需要区分。
+
+## Reference
+- https://www.cs.cornell.edu/~tomf/notes/cps104/twoscomp.html
+
+
+## 1. 本章要学会什么
+
+根据 `Readme.md`，本章的核心是：**把 Wasm 整数运算正确地翻译成 AArch64 机器码，并通过自动化测试验证。**
+
+仓库目前只提供教学材料，没有编译器实现。因此，下面的任务应接在你自己的 Chapter02 实现上，继续使用 **C++14、CMake 和 arm64**。
+
+| 学习目标 | 应达到的程度 |
+|---|---|
+| Wasm 整数语义 | 理解 `i32/i64` 加减乘的位宽、补码和溢出行为 |
+| 栈式计算模型 | 能将“弹出两个操作数、计算、压回结果”映射到寄存器或栈槽 |
+| AArch64 指令 | 正确选择 `W`/`X` 寄存器及 `ADD/SUB/MUL` |
+| 大立即数编码 | 能构造任意 32 位和 64 位整数常量 |
+| 测试与工程化 | 跑通 WAST 测试，并加入已有 CI |
+
+最重要的语义是：
+
+$$
+r=(a\mathbin{\mathrm{op}}b)\bmod 2^N,\qquad N\in\{32,64\}
+$$
+
+也就是说，**整数加减乘溢出时回绕，不报错、不饱和**。这三种运算的低位结果也不需要区分有符号和无符号版本。
+
+## 2. 建议的任务拆解
+
+### 任务一：确认 Chapter02 基础可复用
+检查模块解析、导出函数查找、参数传递、`local.get` 和测试执行器是否已打通。
+
+**验收：**上一章测试仍然通过；可以调用带两个整数参数、返回一个整数的 JIT 函数。
+
+### 任务二：接入六条 Wasm 指令
+支持 `i32.add/sub/mul` 和 `i64.add/sub/mul`，延续已有编译分发结构。
+
+先弹出右操作数 `rhs`，再弹出左操作数 `lhs`，计算 `lhs op rhs`。**减法最容易暴露顺序错误**，建议先用 `7 - 3 = 4` 检查。
+
+**验收：**六条指令都能解析，且每次执行后操作数栈净减少一个值。
+
+### 任务三：实现 AArch64 发码
+| Wasm 操作 | i32 | i64 |
+|---|---|---|
+| 加法 | `ADD Wd, Wn, Wm` | `ADD Xd, Xn, Xm` |
+| 减法 | `SUB Wd, Wn, Wm` | `SUB Xd, Xn, Xm` |
+| 乘法 | `MUL Wd, Wn, Wm` | `MUL Xd, Xn, Xm` |
+
+`MUL` 是 `MADD` 使用零寄存器作为加数的别名。普通乘法保留低位，正好符合本章语义。
+
+**验收：**反汇编确认位宽、源寄存器顺序和目标寄存器正确；结果写回遵循已有栈槽布局。
+
+### 任务四：完善常量装载
+先采用简单、确定的实现：用 `MOVZ` 初始化一个 16 位片段，再用必要的 `MOVK` 填充其他片段。32 位最多两个片段，64 位最多四个片段。
+
+不要把汇编器的 `MOV reg, #imm` 当成万能的单条机器指令；也不要假设 `ADD/SUB` 的立即数字段可以容纳任意整数。
+
+**验收：**覆盖 `0`、`-1`、最高位为 1 的值，以及 `0x0123456789abcdef` 等多片段常量。`MOVN` 和更短序列优化可以稍后做。
+
+### 任务五：跑测试并补缺口
+现有 `arithmetic.wast` 包含 **48 条断言**，覆盖两个位宽的普通运算、负数和溢出回绕。
+
+一个关键区别：**这些函数体只有 `local.get` 和运算，常量位于调用断言中，因此不能直接证明 JIT 的大立即数发码正确。**
+
+建议在现有测试文件中补充：
+- 函数体直接返回大整数常量，验证常量装载。
+- `7 - 3` 与 `3 - 7`，验证操作数顺序。
+- `(a - b) * (c + d)`，验证中间结果保存和寄存器复用。
+
+### 任务六：加入 CI
+复用上一章的 WAST → JSON/Wasm → GoogleTest 流程，让断言失败最终产生非零退出码。
+
+**验收：**旧章节和新增测试一起通过；保留 代码质量要求 中的格式检查、静态检查和 ASan 测试。跨架构时，测试程序和 GoogleTest 都需要面向 arm64 构建。
+
+## 3. 工具与最佳实践
+
+| 工具 | 推荐用途 |
+|---|---|
+| WABT：`wast2json`、`wasm-objdump` | 转换测试脚本，检查 Wasm 指令与类型 |
+| [Compiler Explorer](https://godbolt.org/) | 选择 AArch64 编译器，使用 `-O2` 观察常量和运算的汇编 |
+| `aarch64-linux-gnu-objdump` / Capstone | 检查自己生成的机器码，而不只看执行结果 |
+| GoogleTest、CTest | 复用测试执行器，报告模块、函数、参数和实际结果 |
+| 原生 arm64 / `qemu-aarch64` | 执行生成的代码；QEMU 方案需配置目标运行库 |
+
+实践上，建议**先全用寄存器形式实现正确性，再考虑立即数优化**。测试执行器中的参考运算使用 `uint32_t/uint64_t`，避免 C++ 有符号溢出的未定义行为；比较整数结果时以相应位宽的位模式为准。
+
+完成标准不只是“48 条断言通过”，还应包括：**大常量确实经过 JIT 发码、组合表达式正确、上一章无回归、CI 可重复运行**。本章暂不需要扩展到除法、浮点或复杂寄存器分配。

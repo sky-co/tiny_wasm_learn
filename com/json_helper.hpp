@@ -1,20 +1,45 @@
 #pragma once
 
+#include <charconv>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <string>
+#include <string_view>
+#include <system_error>
 
 #include "data_types.hpp"
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
 
+inline unsigned long long StringToUnsignedLongLong(std::string_view text) { // NOLINT(google-runtime-int)
+    int base = 10;
+    if (text.size() >= 2U && text[0] == '0' && (text[1] == 'x' || text[1] == 'X')) {
+        text.remove_prefix(2U);
+        base = 16;
+    }
+    if (text.empty()) {
+        throw std::invalid_argument("empty unsigned integer");
+    }
+    unsigned long long value = 0; // NOLINT(google-runtime-int)
+    const char *const end = text.data() + text.size();
+    const auto result = std::from_chars(text.data(), end, value, base);
+    if (result.ec == std::errc::result_out_of_range) {
+        throw std::out_of_range("unsigned integer exceeds unsigned long long range");
+    }
+    if (result.ec != std::errc{} || result.ptr != end) {
+        throw std::invalid_argument("invalid unsigned integer");
+    }
+    return value;
+}
+
 inline Argument ReadArgument(const json &node) {
     Argument argument;
     node.at("type").get_to(argument.type);
     // wast2json stores numeric values as std::strings, for example "10".
     const std::string text = node.at("value").get<std::string>();
-    argument.value = std::stoi(text);
+    argument.value = StringToUnsignedLongLong(text);
     return argument;
 }
 

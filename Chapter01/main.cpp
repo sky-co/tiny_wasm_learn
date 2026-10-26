@@ -29,7 +29,6 @@ class ByteReader {
     void ParseSections() {
         while (true) {
             const uint8_t section_id = ReadU8();
-            // cout << "Parse section: " << ReadString() << endl;
             const uint32_t payload_size = ReadU32Leb128();
             cout << "section id = " << static_cast<unsigned>(section_id) << ", payload size = " << payload_size << '\n';
 

@@ -9,7 +9,7 @@
 
 struct Argument {
     std::string type;
-    uint64_t value{};
+    unsigned long long value{}; // NOLINT(google-runtime-int)
 };
 struct Action {
     std::string type;

@@ -1,5 +1,3 @@
-#pragma once
-
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -69,6 +67,71 @@ inline void PushStack(std::vector<uint8_t> &out) {
     AppendWord(out, 0xF90003E1U);
 }
 
+inline void LoadStack(std::vector<uint8_t> &out) {
+    AppendWord(out, 0xE20340F9U);
+    AppendWord(out, 0xFF430091U);
+    AppendWord(out, 0xE10340F9U);
+}
+
+inline void Recover(std::vector<uint8_t> &out) {
+    // 返回结果，恢复 SP
+    AppendWord(out, 0xE00340F9U);
+    AppendWord(out, 0xFF430091U);
+}
+
+inline void EmitAdd(std::vector<uint8_t> &out, uint8_t op) {
+    LoadStack(out);
+
+    if (op == 0x6AU) {
+        // add w1, w1, w2
+        AppendWord(out, 0x2100020BU);
+    } else if (op == 0x7CU) {
+        // add x1, x1, x2
+        AppendWord(out, 0x2100028BU);
+    }
+
+    // str x1, [sp]  用原 x 的栈槽保存结果
+    AppendWord(out, 0xF90003E1U);
+
+    Recover(out);
+}
+
+inline void EmitSub(std::vector<uint8_t> &out, uint8_t op) {
+    LoadStack(out);
+
+    if (op == 0x6BU) {
+        // sub w1, w1, w2
+        AppendWord(out, 0x2100024BU);
+    } else if (op == 0x7DU) {
+        // sub x1, x1, x2
+        AppendWord(out, 0x210002CBU);
+    }
+
+    // str x1, [sp]  用原 x 的栈槽保存结果
+    AppendWord(out, 0xF90003E1U);
+
+    Recover(out);
+}
+
+inline void EmitMul(std::vector<uint8_t> &out, uint8_t op) {
+    LoadStack(out);
+
+    // mul w1, w1, w2
+    if (op == 0x6CU) {
+        // mul w1, w1, w2
+        AppendWord(out, 0x007C011BU);
+    } else if (op == 0x7EU) {
+        // mul x1, x1, x2
+        AppendWord(out, 0x8B00001FU);
+    }
+
+    // str x1, [sp]  用原 x 的栈槽保存结果
+    // 写入 w1 同时将 x1 高 32 位清零
+    AppendWord(out, 0xF90003E1U);
+
+    Recover(out);
+}
+
 inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
     std::vector<uint8_t> out;
     for (size_t i = 0; i < func.body.size(); ++i) {
@@ -76,11 +139,6 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
         switch (instr.opcode) {
         case 0x20U:
             EmitLoadLocal(out, instr.index);
-            PushStack(out);
-            break;
-        case 0x41U:
-        case 0x42U:
-            EmitMovX1Imm(out, static_cast<uint64_t>(instr.immediate));
             PushStack(out);
             break;
         case 0x21U:
@@ -91,6 +149,23 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
         case 0x22U:
             AppendWord(out, 0xF94003E1U);
             EmitStoreLocal(out, instr.index);
+            break;
+        case 0x41U:
+        case 0x42U:
+            EmitMovX1Imm(out, static_cast<uint64_t>(instr.immediate));
+            PushStack(out);
+            break;
+        case 0x6AU:
+        case 0x7CU:
+            EmitAdd(out, instr.opcode);
+            break;
+        case 0x6BU:
+        case 0x7DU:
+            EmitSub(out, instr.opcode);
+            break;
+        case 0x6CU:
+        case 0x7EU:
+            EmitMul(out, instr.opcode);
             break;
         case 0x0BU:
             if (!func.results.empty()) {
@@ -172,6 +247,7 @@ inline CompiledModule ParseWasm(const std::string &file_path) {
     }
 
     // Parse wasm file
+    std::cout << "=========================== Parsing WASM ===========================" << '\n';
     std::cout << "Open " << file_path << "..." << '\n';
     const std::vector<uint8_t> stream{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
     ByteReader br(stream);

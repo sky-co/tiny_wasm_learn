@@ -159,7 +159,7 @@ class ByteReader {
             exp.name = name;
             exp.kind = ReadU8();
             exp.idx = ReadU32Leb128();
-            std::cout << "export " << exp.name << " kind " << static_cast<unsigned>(exp.kind) << " func " << exp.idx << '\n';
+            std::cout << "  export " << exp.name << " kind " << static_cast<unsigned>(exp.kind) << " func " << exp.idx << '\n';
             exports_.push_back(exp);
         }
 
@@ -196,8 +196,26 @@ class ByteReader {
                     instr.immediate = ReadSignedLeb128(32U);
                 } else if (opcode == 0x42U) {
                     instr.immediate = ReadSignedLeb128(64U);
+                } else if (opcode == 0x6AU) {
+                    // i32.add
+                    std::cout << " I32.Add opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == 0x6BU) {
+                    // i32.sub
+                    std::cout << " I32.Sub opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == 0x6CU) {
+                    // i32.mul
+                    std::cout << " I32.Mul opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == 0x7CU) {
+                    // i64.add
+                    std::cout << " I64.Add opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == 0x7DU) {
+                    // i64.sub
+                    std::cout << " I64.Sub opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == 0x7EU) {
+                    // i64.mul
+                    std::cout << " I64.Mul opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode != 0x0BU) {
-                    std::cout << " unsupported opcode " << static_cast<unsigned>(opcode);
+                    std::cout << " Unsupported opcode " << static_cast<unsigned>(opcode);
                     break;
                 } else {
                     // do nothing
@@ -208,7 +226,7 @@ class ByteReader {
                     break;
                 }
             }
-
+            std::cout << '\n';
             SkipTo(body_end);
         }
 
