@@ -68,15 +68,9 @@ inline void PushStack(std::vector<uint8_t> &out) {
 }
 
 inline void LoadStack(std::vector<uint8_t> &out) {
-    AppendWord(out, 0xE20340F9U);
-    AppendWord(out, 0xFF430091U);
-    AppendWord(out, 0xE10340F9U);
-}
-
-inline void Recover(std::vector<uint8_t> &out) {
-    // 返回结果，恢复 SP
-    AppendWord(out, 0xE00340F9U);
-    AppendWord(out, 0xFF430091U);
+    AppendWord(out, 0xF94003E2U);
+    AppendWord(out, 0x910043FFU);
+    AppendWord(out, 0xF94003E1U);
 }
 
 inline void EmitAdd(std::vector<uint8_t> &out, uint8_t op) {
@@ -84,16 +78,14 @@ inline void EmitAdd(std::vector<uint8_t> &out, uint8_t op) {
 
     if (op == 0x6AU) {
         // add w1, w1, w2
-        AppendWord(out, 0x2100020BU);
+        AppendWord(out, 0x0B020021U);
     } else if (op == 0x7CU) {
         // add x1, x1, x2
-        AppendWord(out, 0x2100028BU);
+        AppendWord(out, 0x8B020021U);
     }
 
     // str x1, [sp]  用原 x 的栈槽保存结果
     AppendWord(out, 0xF90003E1U);
-
-    Recover(out);
 }
 
 inline void EmitSub(std::vector<uint8_t> &out, uint8_t op) {
@@ -101,16 +93,14 @@ inline void EmitSub(std::vector<uint8_t> &out, uint8_t op) {
 
     if (op == 0x6BU) {
         // sub w1, w1, w2
-        AppendWord(out, 0x2100024BU);
+        AppendWord(out, 0x4B020021U);
     } else if (op == 0x7DU) {
         // sub x1, x1, x2
-        AppendWord(out, 0x210002CBU);
+        AppendWord(out, 0xCB020021U);
     }
 
     // str x1, [sp]  用原 x 的栈槽保存结果
     AppendWord(out, 0xF90003E1U);
-
-    Recover(out);
 }
 
 inline void EmitMul(std::vector<uint8_t> &out, uint8_t op) {
@@ -119,17 +109,15 @@ inline void EmitMul(std::vector<uint8_t> &out, uint8_t op) {
     // mul w1, w1, w2
     if (op == 0x6CU) {
         // mul w1, w1, w2
-        AppendWord(out, 0x007C011BU);
+        AppendWord(out, 0x1B027C21U);
     } else if (op == 0x7EU) {
         // mul x1, x1, x2
-        AppendWord(out, 0x8B00001FU);
+        AppendWord(out, 0x9B027C21U);
     }
 
     // str x1, [sp]  用原 x 的栈槽保存结果
     // 写入 w1 同时将 x1 高 32 位清零
     AppendWord(out, 0xF90003E1U);
-
-    Recover(out);
 }
 
 inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {

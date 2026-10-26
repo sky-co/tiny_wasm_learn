@@ -6,9 +6,12 @@
 #include "../com/json_helper.hpp"
 #include "../com/wasm_helper.hpp"
 
-TEST(WasmCompilerLearnTest, Chapter02Test) {
-    const Commands cmd = ReadJson("./local.json");
-    ASSERT_FALSE(cmd.ls.empty()) << "No Wasm modules were loaded from local.json";
+TEST(WasmCompilerLearnTest, Chapter03Test) { // NOLINT(cert-err58-cpp)
+    const Commands cmd = ReadJson("./arithm.json");
+    ASSERT_EQ(cmd.ls.size(), 2U);
+    for (const Module &module : cmd.ls) {
+        ASSERT_EQ(module.fun.size(), 24U);
+    }
     PrintCommands(cmd);
 
     std::vector<CompiledModule> compiled;
