@@ -2,11 +2,46 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Arm64",
+            "name": "Debug Arm64 - Ch02",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/Chapter02/assert_wasm",
             "cwd": "${workspaceFolder}/Chapter02",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb-multiarch",
+            "miDebuggerArgs": "--nx",
+            "miDebuggerServerAddress": "127.0.0.1:2345",
+            "stopAtEntry": true,
+            "externalConsole": false,
+            "setupCommands": [
+                {
+                    "description": "Do not prompt for debuginfod",
+                    "text": "set debuginfod enabled off",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set AArch64 before connecting",
+                    "text": "set architecture aarch64",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Find the AArch64 dynamic linker and libc",
+                    "text": "set sysroot /usr/aarch64-linux-gnu",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+         {
+            "name": "Debug Arm64 - Ch03",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Chapter03/arithm",
+            "cwd": "${workspaceFolder}/Chapter03",
             "MIMode": "gdb",
             "miDebuggerPath": "/usr/bin/gdb-multiarch",
             "miDebuggerArgs": "--nx",

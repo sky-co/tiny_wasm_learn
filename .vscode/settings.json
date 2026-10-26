@@ -46,10 +46,10 @@
     "C_Cpp.intelliSenseEngineFallback": "enabled",
     "C_Cpp.autocomplete": "default",
     "C_Cpp.errorSquiggles": "disabled",
-    "C_Cpp.default.compilerPath": "/usr/bin/g++",
+    "C_Cpp.default.compilerPath": "/usr/bin/aarch64-linux-gnu-g++",
     "C_Cpp.default.cppStandard": "c++17",
     "C_Cpp.default.cStandard": "c11",
-    "C_Cpp.default.intelliSenseMode": "linux-gcc-x64",
+    "C_Cpp.default.intelliSenseMode": "linux-gcc-arm64",
     "C_Cpp.default.includePath": [
         "${workspaceFolder}/**"
     ],
@@ -57,6 +57,9 @@
         "${workspaceFolder}"
     ],
     "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": false,
+    "files.associations": {
+        "*.hpp": "cpp"
+    },
     "editor.inlineSuggest.enabled": true,
     "github.copilot.enable": {
         "*": true
