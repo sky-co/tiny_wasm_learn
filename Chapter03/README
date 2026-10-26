@@ -7,13 +7,20 @@ wast2json: https://github.com/WebAssembly/wabt/blob/main/docs/wast2json.md
 $ wast2json arithmetic.wast -o arithm.json
 ```
 
-## Debug with aarch64-lin
+## Debug with aarch64-linux
 ```shell
 $ aarch64-linux-gnu-g++ -std=c++17 -Wall -Wextra -O0 -g chapter03_main.cpp -o arithm
 $ qemu-aarch64 -L /usr/aarch64-linux-gnu ./arithm
 
 $ qemu-aarch64 -g 2345 -L /usr/aarch64-linux-gnu ./arithm
 vscode debug(F5)
+```
+
+### Build and test from the repository root
+```shell
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --target arithmetic
+ctest --test-dir build --output-on-failure -R chapter03_arm64_gtest
 ```
 
 ## wasm-objdump -x 会列出 type、function、export、code

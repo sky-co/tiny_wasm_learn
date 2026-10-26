@@ -7,7 +7,7 @@ wast2json: https://github.com/WebAssembly/wabt/blob/main/docs/wast2json.md
 $ wast2json local.wast -o local.json
 ```
 
-### Debug with aarch64-lin
+### Debug with aarch64-linux
 ```shell
 $ sudo apt install -y g++-aarch64-linux-gnu
 $ aarch64-linux-gnu-g++ -std=c++17 -Wall -Wextra -O0 -g chapter02_main.cpp -o assert_wasm
