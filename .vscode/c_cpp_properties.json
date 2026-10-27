@@ -13,8 +13,7 @@
                 "path": [
                     "${workspaceFolder}"
                 ],
-                "limitSymbolsToIncludedHeaders": false,
-                "databaseFilename": "${workspaceFolder}/build/cpptools-browse.vc.db"
+                "limitSymbolsToIncludedHeaders": false
             }
         }
     ],
