@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 
@@ -12,7 +13,8 @@ int main() {
     cout << "Star to parse wasm code..." << endl;
 
     // Parse json file
-    const Commands cmd = ReadJson("./arithm.json");
+    const char *const json_env = std::getenv("WASM_TEST_JSON");
+    const Commands cmd = ReadJson(json_env != nullptr ? json_env : "./arithm.json");
     PrintCommands(cmd);
 
     // Parse wasm

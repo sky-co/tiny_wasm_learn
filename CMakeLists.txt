@@ -41,14 +41,14 @@ add_executable(parse_wasm Chapter01/main.cpp)
 if(BUILD_TESTING)
     add_test(
         NAME chapter02_arm64_gtest
-        COMMAND bash ${CMAKE_SOURCE_DIR}/Chapter02/run_arm64_test.sh
+        COMMAND bash "${CMAKE_SOURCE_DIR}/run_arm64_test.sh" Chapter02 local.wast
     )
     set_tests_properties(chapter02_arm64_gtest PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
     add_test(
         NAME chapter03_arm64_gtest
-        COMMAND bash ${CMAKE_SOURCE_DIR}/Chapter03/run_arm64_test.sh
+        COMMAND bash "${CMAKE_SOURCE_DIR}/run_arm64_test.sh" Chapter03 arithmetic.wast
     )
     set_tests_properties(chapter03_arm64_gtest PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -170,8 +170,6 @@ endif()
 
 if(CLANG_TIDY)
     set(WASM_LEARN_TIDY_SOURCES ${WASM_LEARN_CHECK_SOURCES})
-    # This unused upstream excerpt requires src/config.hpp from its original project.
-    list(FILTER WASM_LEARN_TIDY_SOURCES EXCLUDE REGEX "^${CMAKE_SOURCE_DIR}/com/util\\.hpp$")
     set(tidy_commands)
     foreach(source ${WASM_LEARN_TIDY_SOURCES})
         if(source MATCHES "\\.cpp$|\\.hpp$")

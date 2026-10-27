@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "OPCode.hpp"
 #include "executable_buffer.hpp"
 
 struct Argument {
@@ -51,7 +52,7 @@ struct ExpFunc {
 };
 
 struct Instruction {
-    uint8_t opcode = 0;
+    vb::OPCode opcode = vb::OPCode::UNREACHABLE;
     uint32_t index = 0;
     int64_t immediate = 0;
 };
@@ -82,3 +83,5 @@ struct CompiledModule {
     std::unordered_map<std::string, uint32_t> exports;
     ExecutableBuffer code;
 };
+
+enum class SectionID : uint16_t { SECTION_CUSTOM = 0x00, SECTION_TYPE = 0x01, SECTION_FUNCTION = 0x03, SECTION_EXPORT = 0x07, SECTION_CODE = 0x0A };

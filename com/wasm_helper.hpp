@@ -73,13 +73,13 @@ inline void LoadStack(std::vector<uint8_t> &out) {
     AppendWord(out, 0xF94003E1U);
 }
 
-inline void EmitAdd(std::vector<uint8_t> &out, uint8_t op) {
+inline void EmitAdd(std::vector<uint8_t> &out, vb::OPCode op) {
     LoadStack(out);
 
-    if (op == 0x6AU) {
+    if (op == vb::OPCode::I32_ADD) {
         // add w1, w1, w2
         AppendWord(out, 0x0B020021U);
-    } else if (op == 0x7CU) {
+    } else if (op == vb::OPCode::I64_ADD) {
         // add x1, x1, x2
         AppendWord(out, 0x8B020021U);
     }
@@ -88,13 +88,13 @@ inline void EmitAdd(std::vector<uint8_t> &out, uint8_t op) {
     AppendWord(out, 0xF90003E1U);
 }
 
-inline void EmitSub(std::vector<uint8_t> &out, uint8_t op) {
+inline void EmitSub(std::vector<uint8_t> &out, vb::OPCode op) {
     LoadStack(out);
 
-    if (op == 0x6BU) {
+    if (op == vb::OPCode::I32_SUB) {
         // sub w1, w1, w2
         AppendWord(out, 0x4B020021U);
-    } else if (op == 0x7DU) {
+    } else if (op == vb::OPCode::I64_SUB) {
         // sub x1, x1, x2
         AppendWord(out, 0xCB020021U);
     }
@@ -103,14 +103,14 @@ inline void EmitSub(std::vector<uint8_t> &out, uint8_t op) {
     AppendWord(out, 0xF90003E1U);
 }
 
-inline void EmitMul(std::vector<uint8_t> &out, uint8_t op) {
+inline void EmitMul(std::vector<uint8_t> &out, vb::OPCode op) {
     LoadStack(out);
 
     // mul w1, w1, w2
-    if (op == 0x6CU) {
+    if (op == vb::OPCode::I32_MUL) {
         // mul w1, w1, w2
         AppendWord(out, 0x1B027C21U);
-    } else if (op == 0x7EU) {
+    } else if (op == vb::OPCode::I64_MUL) {
         // mul x1, x1, x2
         AppendWord(out, 0x9B027C21U);
     }
@@ -125,37 +125,37 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
     for (size_t i = 0; i < func.body.size(); ++i) {
         const Instruction &instr = func.body[i];
         switch (instr.opcode) {
-        case 0x20U:
+        case vb::OPCode::LOCAL_GET:
             EmitLoadLocal(out, instr.index);
             PushStack(out);
             break;
-        case 0x21U:
+        case vb::OPCode::LOCAL_SET:
             AppendWord(out, 0xF94003E1U);
             AppendWord(out, 0x910043FFU);
             EmitStoreLocal(out, instr.index);
             break;
-        case 0x22U:
+        case vb::OPCode::LOCAL_TEE:
             AppendWord(out, 0xF94003E1U);
             EmitStoreLocal(out, instr.index);
             break;
-        case 0x41U:
-        case 0x42U:
+        case vb::OPCode::I32_CONST:
+        case vb::OPCode::I64_CONST:
             EmitMovX1Imm(out, static_cast<uint64_t>(instr.immediate));
             PushStack(out);
             break;
-        case 0x6AU:
-        case 0x7CU:
+        case vb::OPCode::I32_ADD:
+        case vb::OPCode::I64_ADD:
             EmitAdd(out, instr.opcode);
             break;
-        case 0x6BU:
-        case 0x7DU:
+        case vb::OPCode::I32_SUB:
+        case vb::OPCode::I64_SUB:
             EmitSub(out, instr.opcode);
             break;
-        case 0x6CU:
-        case 0x7EU:
+        case vb::OPCode::I32_MUL:
+        case vb::OPCode::I64_MUL:
             EmitMul(out, instr.opcode);
             break;
-        case 0x0BU:
+        case vb::OPCode::END:
             if (!func.results.empty()) {
                 AppendWord(out, 0xF94003E0U);
                 AppendWord(out, 0x910043FFU);

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "data_types.hpp"
+#include "util.hpp"
 
 class ByteReader {
   public:
@@ -27,22 +28,22 @@ class ByteReader {
 
     void ParseSections() {
         while (pos_ < bytes_.size()) {
-            const uint8_t section_id = ReadU8();
+            const SectionID section_id = static_cast<SectionID>(ReadU8());
             const uint32_t payload_size = ReadU32Leb128();
             const size_t section_end = pos_ + payload_size;
             std::cout << "section id = " << static_cast<unsigned>(section_id) << ", payload size = " << payload_size << '\n';
 
             switch (section_id) {
-            case 1:
+            case SectionID::SECTION_TYPE:
                 ParseTypeSection(payload_size);
                 break;
-            case 3:
+            case SectionID::SECTION_FUNCTION:
                 ParseFunctionSection(payload_size);
                 break;
-            case 7:
+            case SectionID::SECTION_EXPORT:
                 ParseExportSection(payload_size);
                 break;
-            case 10:
+            case SectionID::SECTION_CODE:
                 ParseCodeSection(payload_size);
                 break;
             default:
@@ -93,7 +94,7 @@ class ByteReader {
         if (shift < max_bits && (byte & 0x40U) != 0U) {
             result |= ~uint64_t{0} << shift;
         }
-        return static_cast<int64_t>(result);
+        return vb::bit_cast<int64_t>(result);
     }
 
     void SkipTo(size_t section_end) {
@@ -187,34 +188,34 @@ class ByteReader {
             functions_[i].decl_cnt = local_count;
             std::cout << "  func " << i << " locals " << local_count << " ops";
             while (pos_ < body_end && pos_ < bytes_.size()) {
-                const uint8_t opcode = ReadU8();
+                const vb::OPCode opcode = static_cast<vb::OPCode>(ReadU8());
                 Instruction instr;
                 instr.opcode = opcode;
-                if (opcode == 0x20U || opcode == 0x21U || opcode == 0x22U) {
+                if (opcode == vb::OPCode::LOCAL_GET || opcode == vb::OPCode::LOCAL_SET || opcode == vb::OPCode::LOCAL_TEE) {
                     instr.index = ReadU32Leb128();
-                } else if (opcode == 0x41U) {
+                } else if (opcode == vb::OPCode::I32_CONST) {
                     instr.immediate = ReadSignedLeb128(32U);
-                } else if (opcode == 0x42U) {
+                } else if (opcode == vb::OPCode::I64_CONST) {
                     instr.immediate = ReadSignedLeb128(64U);
-                } else if (opcode == 0x6AU) {
+                } else if (opcode == vb::OPCode::I32_ADD) {
                     // i32.add
                     std::cout << " I32.Add opcode " << static_cast<unsigned>(opcode);
-                } else if (opcode == 0x6BU) {
+                } else if (opcode == vb::OPCode::I32_SUB) {
                     // i32.sub
                     std::cout << " I32.Sub opcode " << static_cast<unsigned>(opcode);
-                } else if (opcode == 0x6CU) {
+                } else if (opcode == vb::OPCode::I32_MUL) {
                     // i32.mul
                     std::cout << " I32.Mul opcode " << static_cast<unsigned>(opcode);
-                } else if (opcode == 0x7CU) {
+                } else if (opcode == vb::OPCode::I64_ADD) {
                     // i64.add
                     std::cout << " I64.Add opcode " << static_cast<unsigned>(opcode);
-                } else if (opcode == 0x7DU) {
+                } else if (opcode == vb::OPCode::I64_SUB) {
                     // i64.sub
                     std::cout << " I64.Sub opcode " << static_cast<unsigned>(opcode);
-                } else if (opcode == 0x7EU) {
+                } else if (opcode == vb::OPCode::I64_MUL) {
                     // i64.mul
                     std::cout << " I64.Mul opcode " << static_cast<unsigned>(opcode);
-                } else if (opcode != 0x0BU) {
+                } else if (opcode != vb::OPCode::END) {
                     std::cout << " Unsupported opcode " << static_cast<unsigned>(opcode);
                     break;
                 } else {
@@ -222,7 +223,7 @@ class ByteReader {
                 }
                 functions_[i].body.push_back(instr);
                 std::cout << ' ' << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned>(opcode) << std::dec;
-                if (opcode == 0x0BU) {
+                if (opcode == vb::OPCode::END) {
                     break;
                 }
             }

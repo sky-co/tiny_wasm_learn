@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 
@@ -8,9 +9,11 @@
 int main() {
     std::cout << "Start to parse wasm code..." << '\n';
 
-    const Commands cmd = ReadJson("./local.json");
+    const char *const json_env = std::getenv("WASM_TEST_JSON");
+    const char *const json_path = json_env != nullptr ? json_env : "./local.json";
+    const Commands cmd = ReadJson(json_path);
     if (cmd.ls.empty()) {
-        std::cerr << "No Wasm modules were loaded from local.json\n";
+        std::cerr << "No Wasm modules were loaded from " << json_path << '\n';
         return 1;
     }
     PrintCommands(cmd);

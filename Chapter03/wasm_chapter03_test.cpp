@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdlib>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <vector>
@@ -7,7 +8,8 @@
 #include "../com/wasm_helper.hpp"
 
 TEST(WasmCompilerLearnTest, Chapter03Test) { // NOLINT(cert-err58-cpp)
-    const Commands cmd = ReadJson("./arithm.json");
+    const char *const json_env = std::getenv("WASM_TEST_JSON");
+    const Commands cmd = ReadJson(json_env != nullptr ? json_env : "./arithm.json");
     ASSERT_EQ(cmd.ls.size(), 2U);
     for (const Module &module : cmd.ls) {
         ASSERT_EQ(module.fun.size(), 24U);

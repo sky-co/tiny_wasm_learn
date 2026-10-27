@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdlib>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <vector>
@@ -31,8 +32,10 @@ TEST(WasmCompilerLearnTest, ReadLargeArgument) {
 }
 
 TEST(WasmCompilerLearnTest, Chapter02Test) {
-    const Commands cmd = ReadJson("./local.json");
-    ASSERT_FALSE(cmd.ls.empty()) << "No Wasm modules were loaded from local.json";
+    const char *const json_env = std::getenv("WASM_TEST_JSON");
+    const char *const json_path = json_env != nullptr ? json_env : "./local.json";
+    const Commands cmd = ReadJson(json_path);
+    ASSERT_FALSE(cmd.ls.empty()) << "No Wasm modules were loaded from " << json_path;
     PrintCommands(cmd);
 
     std::vector<CompiledModule> compiled;

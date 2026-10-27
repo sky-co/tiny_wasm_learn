@@ -24,8 +24,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <type_traits>
+#include <utility>
 
-#include "src/config.hpp"
+#ifndef VB_NOEXCEPT
+#define VB_NOEXCEPT noexcept
+#endif
 
 #if (defined _MSC_VER) && !(defined __clang__)
 #include <intrin.h>
@@ -584,8 +587,8 @@ inline size_t strlen_s(char const *const str, size_t const max) VB_NOEXCEPT {
 template <typename T> inline typename std::remove_const<typename std::remove_pointer<T>::type>::type *pRemoveConst(T const ptr) VB_NOEXCEPT {
     static_assert(std::is_pointer<T>::value, "T must be a pointer");
     // coverity[autosar_cpp14_a5_2_3_violation]
-    return const_cast<typename std::remove_const<typename std::remove_pointer<T>::type>::type *>(
-        ptr); // NOLINT(cppcoreguidelines-pro-type-const-cast)
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+    return const_cast<typename std::remove_const<typename std::remove_pointer<T>::type>::type *>(ptr);
 }
 
 ///
