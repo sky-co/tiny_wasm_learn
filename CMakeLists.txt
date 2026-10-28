@@ -206,7 +206,10 @@ add_custom_target(check-asan
     COMMAND ${CMAKE_COMMAND} -E env
         ASAN_OPTIONS=halt_on_error=1:detect_leaks=1:abort_on_error=1
         $<TARGET_FILE:hello>
-    COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_SOURCE_DIR}/Chapter01"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/chapter01-test"
+    COMMAND wat2wasm "${CMAKE_SOURCE_DIR}/Chapter01/add.wat"
+        -o "${CMAKE_BINARY_DIR}/chapter01-test/add.wasm"
+    COMMAND ${CMAKE_COMMAND} -E chdir "${CMAKE_BINARY_DIR}/chapter01-test"
         ${CMAKE_COMMAND} -E env
         ASAN_OPTIONS=halt_on_error=1:detect_leaks=1:abort_on_error=1
         $<TARGET_FILE:parse_wasm>

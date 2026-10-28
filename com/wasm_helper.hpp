@@ -170,6 +170,7 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
         }
     }
 
+    // 如果生成的机器码末尾没有返回指令，就补上“返回 0”的结尾
     if (out.size() < 4U || out[out.size() - 4U] != 0xC0U) {
         AppendWord(out, 0xAA1F03E0U);
         AppendWord(out, 0xD65F03C0U);

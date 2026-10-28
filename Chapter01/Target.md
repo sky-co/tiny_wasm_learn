@@ -14,6 +14,19 @@ wat2wasm
    ↓
 测试、格式检查、CI
 
+## Shared Parser
+
+Chapter01 uses `ByteReader` from [com/byte_reader.hpp](../com/byte_reader.hpp), the same parser used by Chapter02/03. It only parses the Wasm file; it does not allocate executable memory or invoke the ARM64 JIT.
+
+From the repository root, build and run the sample with AddressSanitizer:
+
+```shell
+cmake -S . -B build
+cmake --build build --target check-asan
+```
+
+This target uses `wat2wasm` to generate `build/chapter01-test/add.wasm` and runs `build/bin/parse_wasm` from that directory. The parser prints the module types, functions, exports, and supported instructions, including `return` and `end` in this sample.
+
 ## 执行swq 检查
 
 ### Code format

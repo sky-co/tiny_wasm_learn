@@ -215,6 +215,8 @@ class ByteReader {
                 } else if (opcode == vb::OPCode::I64_MUL) {
                     // i64.mul
                     std::cout << " I64.Mul opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::RETURN) {
+                    std::cout << " Return opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode != vb::OPCode::END) {
                     std::cout << " Unsupported opcode " << static_cast<unsigned>(opcode);
                     break;
