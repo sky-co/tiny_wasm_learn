@@ -215,6 +215,14 @@ class ByteReader {
                 } else if (opcode == vb::OPCode::I64_MUL) {
                     // i64.mul
                     std::cout << " I64.Mul opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::IF) {
+                    std::cout << " IF opcode " << static_cast<unsigned>(opcode);
+                    WasmValueType type = static_cast<WasmValueType>(ReadU8());
+                    std::cout << " type " << static_cast<unsigned>(type);
+                } else if (opcode == vb::OPCode::ELSE) {
+                    std::cout << " ELSE opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I32_LT_S) {
+                    std::cout << " I32.Lt_S opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::RETURN) {
                     std::cout << " Return opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode != vb::OPCode::END) {
@@ -224,7 +232,7 @@ class ByteReader {
                     // do nothing
                 }
                 functions_[i].body.push_back(instr);
-                std::cout << ' ' << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned>(opcode) << std::dec;
+                std::cout << ' ' << "0x" << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned>(opcode) << std::dec;
                 if (opcode == vb::OPCode::END) {
                     break;
                 }

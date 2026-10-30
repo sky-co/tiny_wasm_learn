@@ -120,8 +120,33 @@ inline void EmitMul(std::vector<uint8_t> &out, vb::OPCode op) {
     AppendWord(out, 0xF90003E1U);
 }
 
+inline void EmitIF(std::vector<uint8_t> &out, uint64_t imm) {
+    AppendWord(out, 0xB94003E1U);
+    AppendWord(out, 0x910043FFU);
+
+    uint32_t imm19 = static_cast<uint32_t>(imm & 0x7FFFFU);
+    uint32_t word = 0x34000000U | (imm19 << 5U) | 1U;
+    AppendWord(out, word);
+
+    // then: i32.sub (i32.const 0) (local.get $x)
+    AppendWord(out, 0xB9400001U);
+    AppendWord(out, 0x4B0103E1U);
+}
+
+inline void EmitELSE(std::vector<uint8_t> &out, const size_t bran_pos) {
+    const size_t else_pos = out.size();
+    const int64_t delta = static_cast<int64_t>(else_pos) - static_cast<int64_t>(bran_pos);
+    const uint32_t imm19 = static_cast<uint32_t>(delta / 4) & 0x7FFFFU;
+    const uint32_t word = 0x34000001U | (imm19 << 5U);
+
+    for (size_t byte_index = 0; byte_index < 4U; ++byte_index) {
+        out[bran_pos + byte_index] = static_cast<uint8_t>(word >> (byte_index * 8U));
+    }
+}
+
 inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
     std::vector<uint8_t> out;
+    size_t bran_pos = 0;
     for (size_t i = 0; i < func.body.size(); ++i) {
         const Instruction &instr = func.body[i];
         switch (instr.opcode) {
@@ -154,6 +179,15 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
         case vb::OPCode::I32_MUL:
         case vb::OPCode::I64_MUL:
             EmitMul(out, instr.opcode);
+            break;
+        case vb::OPCode::IF:
+            bran_pos = out.size();
+            EmitIF(out, instr.immediate);
+            PushStack(out);
+            break;
+        case vb::OPCode::ELSE:
+            EmitELSE(out, bran_pos);
+            PushStack(out);
             break;
         case vb::OPCode::END:
             if (!func.results.empty()) {

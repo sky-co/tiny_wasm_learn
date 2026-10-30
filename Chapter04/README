@@ -1,0 +1,137 @@
+Compile
+
+## Convert the local.wast to wasm and json with wast2json
+wast2json: https://github.com/WebAssembly/wabt/blob/main/docs/wast2json.md
+
+```
+$ wast2json arithmetic.wast -o arithm.json
+```
+
+## Debug with aarch64-linux
+```shell
+$ aarch64-linux-gnu-g++ -std=c++17 -Wall -Wextra -O0 -g chapter04_main.cpp -o arithm
+$ qemu-aarch64 -L /usr/aarch64-linux-gnu ./arithm
+
+$ qemu-aarch64 -g 2345 -L /usr/aarch64-linux-gnu ./arithm
+vscode debug(F5)
+```
+
+### Build and test from the repository root
+```shell
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --target arithmetic
+ctest --test-dir build --output-on-failure -R chapter04_arm64_gtest
+```
+我先阅读第四章说明和配套测试，结合前面章节的要求，梳理本章目标、任务顺序与验收方法。
+
+
+Read
+
+Read
+
+Read
+
+Read
+
+本章的关键是让两个分支在汇合后保持一致的栈状态。配套测试还明确要求“任意非零值为真”，并覆盖了 `if` 结果用于返回值和局部变量赋值的场景；我再确认一下项目约定的输入格式和运行方式。
+
+
+Read
+
+Read
+
+Read
+
+## 本章目标
+
+根据 第四章说明，你需要把前三章的“顺序计算”扩展成“条件执行”：**解析 Wasm 的结构化 `if/else`，生成 ARM64 跳转，并保证分支汇合后的值正确。**
+
+本仓库只提供教材和测试，不包含编译器实现。下面是基于本章要求的实施路线，不代表对你现有代码的检查结果。
+
+## 1. 要掌握的知识
+
+| 学习点 | 应达到的程度 |
+|---|---|
+| Wasm 条件语义 | `if` 消耗一个 `i32` 条件，`0` 为假，任意非零值为真 |
+| 结构化控制流 | 理解 `if → else → end`，支持没有 `else` 的形式和嵌套 |
+| 分支结果 | 理解 `(result i32)`：执行的分支需要提供汇合后的结果 |
+| 比较指令 | 比较产生 `i32` 的 `0/1`，区分有符号与无符号比较 |
+| ARM64 分支 | 理解 `CBZ/CBNZ`、`B`，以及比较使用的 `CMP/CSET` |
+| 地址回填 | 先生成占位跳转，确定目标位置后再修补偏移 |
+
+特别注意：**条件为真不等于条件必须是 `1`**。配套测试明确包含 `10` 和 `-10`。
+
+## 2. 推荐任务顺序
+
+### 任务一：扩展指令解析
+- 支持 `if`、`else`、`end`、`nop`，正确读取 `if` 的 block type。
+- 使用控制栈匹配嵌套结构，区分分支结束与函数结束。
+- `nop` 可以不生成机器指令，但必须正确消费 Wasm 指令。
+- 不要搜索原始字节中的 `else/end`：立即数里可能出现相同字节。
+
+**验收：**能正确解析无 `else`、有 `else`、带结果和嵌套的 `if`。
+
+### 任务二：先实现无返回值的条件跳转
+生成代码的基本形态如下，条件已从操作数栈取出：
+
+```asm
+    cbz wCond, else_label
+    ; then 分支
+    b end_label
+else_label:
+    ; else 分支
+end_label:
+```
+
+没有 `else` 时，条件为假直接跳到汇合点。使用 32 位寄存器检查 Wasm 的 `i32` 条件。
+
+**验收：**分别用 `0`、`1`、负数测试分支选择。
+
+### 任务三：实现回填与分支状态合并
+控制栈条目建议记录：进入时的操作数栈高度、结果类型、待回填跳转位置，以及必要的值位置状态。
+
+- 编译 `then` 后，恢复分支入口的编译期操作数栈状态，再编译 `else`。
+- 两条路径必须把结果放到相同的寄存器或栈槽。
+- 无结果的分支也要保持汇合后的栈布局一致。
+- 恢复的是**编译器记录的状态**，不是撤销运行时对局部变量的赋值。
+
+**验收：**`if` 结果能继续参与计算、返回、`local.set` 和 `local.tee`。
+
+### 任务四：补齐比较指令
+本章没有列出比较指令的完整范围。建议先完成示例需要的 `i32.lt_s`，再按 Wasm 1.0 整数比较表补齐；不要把“示例能跑”当成“比较指令已完成”。
+
+重点区分 ARM64 条件码：有符号 `<` 用 `LT`，无符号 `<` 用 `LO`。初版先把比较结果物化为 `0/1`，之后再考虑融合比较和跳转。
+
+**验收：**覆盖相等、负数、边界值，以及同一位模式在有符号/无符号解释下的不同结果。
+
+## 3. 测试与工具
+
+配套测试 有 **10 条断言**，覆盖分支选择、`nop` 和结果传递，但**没有覆盖比较指令、嵌套控制流或 `abs` 示例**。建议补充这些测试，并回归前三章。
+
+沿用第二章的测试路线，用 WABT 转换测试：
+
+```bash
+mkdir -p build/ch04
+wast2json Chapter04/test/if.wast -o build/ch04/if.json
+wasm-objdump -d build/ch04/if.0.wasm
+```
+
+`wast2json` 只生成模块和断言描述，仍需要你的测试驱动调用 JIT 并检查结果。
+
+| 工具 | 用途 |
+|---|---|
+| WABT `wasm-interp` | 为支持的调用方式提供参考结果 |
+| Compiler Explorer | 观察 C/C++ 条件表达式对应的 AArch64 汇编 |
+| `aarch64-linux-gnu-objdump` / Capstone | 检查实际生成的跳转和比较指令 |
+| GoogleTest + CTest | 执行测试驱动并接入 CI |
+| ARM64 原生环境或 QEMU | 运行生成的 ARM64 代码 |
+
+## 4. 最佳实践与完成标准
+
+- **先正确，再优化：**先统一分支结果位置，不急于做复杂寄存器分配。
+- **回填保存偏移，不保存裸指针：**代码缓冲区扩容会使指针失效。
+- **按指令编码计算跳转：**检查相对当前指令的偏移、4 字节对齐和范围；`B` 与 `CBZ` 的编码范围不同。
+- **让失败可观察：**测试失败时输出 Wasm 指令位置、生成代码偏移和反汇编。
+- **CI 同时检查功能和质量：**沿用 代码质量要求，加入第四章测试及前三章回归。ASan 可检查宿主 C++，但不会自动检测所有 JIT 指令中的内存错误。
+
+完成标准：**10 条现有断言通过，新增比较与嵌套测试通过，前三章无回归，CI 自动执行这些检查。**
