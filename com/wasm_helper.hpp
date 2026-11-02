@@ -275,6 +275,12 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
             }
             AppendWord(out, 0xD65F03C0U);
             break;
+        case vb::OPCode::NOP:
+            // NOP does nothing, just continue
+            break;
+        case vb::OPCode::RETURN:
+            // RETURN does nothing, just continue
+            break;
         default:
             std::cout << "cannot compile opcode " << static_cast<unsigned>(instr.opcode) << '\n';
             return {};

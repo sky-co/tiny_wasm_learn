@@ -53,6 +53,13 @@ if(BUILD_TESTING)
     set_tests_properties(chapter03_arm64_gtest PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
+    add_test(
+        NAME chapter04_arm64_gtest
+        COMMAND bash "${CMAKE_SOURCE_DIR}/run_arm64_test.sh" Chapter03 arithmetic.wast
+    )
+    set_tests_properties(chapter04_arm64_gtest PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
 endif()
 
 function(add_cross_program target compiler)

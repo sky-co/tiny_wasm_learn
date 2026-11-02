@@ -230,6 +230,10 @@ class ByteReader {
                     std::cout << " Return opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::END) {
                     std::cout << " End opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::NOP) {
+                    std::cout << " Nop opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::RETURN) {
+                    std::cout << " Return opcode " << static_cast<unsigned>(opcode);
                 } else {
                     std::cout << " Unsupported opcode " << static_cast<unsigned>(opcode);
                     break;
