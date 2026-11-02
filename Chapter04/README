@@ -22,25 +22,6 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --target arithmetic
 ctest --test-dir build --output-on-failure -R chapter04_arm64_gtest
 ```
-我先阅读第四章说明和配套测试，结合前面章节的要求，梳理本章目标、任务顺序与验收方法。
-
-
-Read
-
-Read
-
-Read
-
-Read
-
-本章的关键是让两个分支在汇合后保持一致的栈状态。配套测试还明确要求“任意非零值为真”，并覆盖了 `if` 结果用于返回值和局部变量赋值的场景；我再确认一下项目约定的输入格式和运行方式。
-
-
-Read
-
-Read
-
-Read
 
 ## 本章目标
 

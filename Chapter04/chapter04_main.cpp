@@ -14,7 +14,9 @@ int main() {
 
     // Parse json file
     const char *const json_env = std::getenv("WASM_TEST_JSON");
-    const Commands cmd = ReadJson(json_env != nullptr ? json_env : "./cal_abs.json");
+    // const Commands cmd = ReadJson(json_env != nullptr ? json_env : "./cal_abs.json");
+    const Commands cmd = ReadJson(json_env != nullptr ? json_env : "./if.json");
+
     PrintCommands(cmd);
 
     // Parse wasm
