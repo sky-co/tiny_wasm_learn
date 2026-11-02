@@ -187,6 +187,7 @@ class ByteReader {
 
             functions_[i].decl_cnt = local_count;
             std::cout << "  func " << i << " locals " << local_count << " ops";
+            uint32_t block_depth = 0U;
             while (pos_ < body_end && pos_ < bytes_.size()) {
                 const vb::OPCode opcode = static_cast<vb::OPCode>(ReadU8());
                 Instruction instr;
@@ -216,25 +217,30 @@ class ByteReader {
                     // i64.mul
                     std::cout << " I64.Mul opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::IF) {
-                    std::cout << " IF opcode " << static_cast<unsigned>(opcode);
-                    WasmValueType type = static_cast<WasmValueType>(ReadU8());
-                    std::cout << " type " << static_cast<unsigned>(type);
+                    const int8_t block_type = static_cast<int8_t>(ReadU8());
+                    // Ox40 indicates an empty block type in WebAssembly
+                    instr.immediate = block_type;
+                    ++block_depth;
+                    std::cout << " block-type " << static_cast<int32_t>(block_type);
                 } else if (opcode == vb::OPCode::ELSE) {
                     std::cout << " ELSE opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::I32_LT_S) {
                     std::cout << " I32.Lt_S opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::RETURN) {
                     std::cout << " Return opcode " << static_cast<unsigned>(opcode);
-                } else if (opcode != vb::OPCode::END) {
+                } else if (opcode == vb::OPCode::END) {
+                    std::cout << " End opcode " << static_cast<unsigned>(opcode);
+                } else {
                     std::cout << " Unsupported opcode " << static_cast<unsigned>(opcode);
                     break;
-                } else {
-                    // do nothing
                 }
                 functions_[i].body.push_back(instr);
                 std::cout << ' ' << "0x" << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned>(opcode) << std::dec;
                 if (opcode == vb::OPCode::END) {
-                    break;
+                    if (block_depth == 0U) {
+                        break;
+                    }
+                    --block_depth;
                 }
             }
             std::cout << '\n';
