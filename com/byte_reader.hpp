@@ -213,9 +213,12 @@ class ByteReader {
                 } else if (opcode == vb::OPCode::I64_SUB) {
                     // i64.sub
                     std::cout << " I64.Sub opcode " << static_cast<unsigned>(opcode);
-                } else if (opcode == vb::OPCode::I64_MUL) {
-                    // i64.mul
-                    std::cout << " I64.Mul opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I32_DIV_S) {
+                    // i32.div_s
+                    std::cout << " I32.Div_S opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I32_DIV_U) {
+                    // i32.div_u
+                    std::cout << " I32.Div_U opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::IF) {
                     const int8_t block_type = static_cast<int8_t>(ReadU8());
                     // Ox40 indicates an empty block type in WebAssembly

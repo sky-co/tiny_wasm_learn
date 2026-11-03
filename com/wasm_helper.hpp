@@ -121,6 +121,21 @@ inline void EmitMul(std::vector<uint8_t> &out, vb::OPCode op) {
     AppendWord(out, 0xF90003E1U);
 }
 
+inline void EmitDiv(std::vector<uint8_t> &out, vb::OPCode op) {
+    LoadStack(out);
+
+    if (op == vb::OPCode::I32_DIV_S) {
+        // sdiv w1, w1, w2
+        AppendWord(out, 0x1AC10C00U);
+    } else if (op == vb::OPCode::I32_DIV_U) {
+        // udiv w1, w1, w2
+        AppendWord(out, 0x1AC10800U);
+    }
+
+    // str x1, [sp]  用原 x 的栈槽保存结果
+    AppendWord(out, 0xF90003E1U);
+}
+
 inline void EmitI32LtS(std::vector<uint8_t> &out) {
     LoadStack(out);
     // cmp w1, w2
@@ -232,6 +247,10 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
         case vb::OPCode::I32_MUL:
         case vb::OPCode::I64_MUL:
             EmitMul(out, instr.opcode);
+            break;
+        case vb::OPCode::I32_DIV_S:
+        case vb::OPCode::I32_DIV_U:
+            EmitDiv(out, instr.opcode);
             break;
         case vb::OPCode::I32_LT_S:
             EmitI32LtS(out);
