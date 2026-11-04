@@ -1,5 +1,7 @@
 aarch
+asan
 backpatching
+ctest
 fdata
 ffunction
 fsanitize
