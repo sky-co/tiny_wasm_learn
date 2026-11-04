@@ -126,10 +126,16 @@ inline void EmitDiv(std::vector<uint8_t> &out, vb::OPCode op) {
 
     if (op == vb::OPCode::I32_DIV_S) {
         // sdiv w1, w1, w2
-        AppendWord(out, 0x1AC10C00U);
+        AppendWord(out, 0x1AC20C21U);
     } else if (op == vb::OPCode::I32_DIV_U) {
         // udiv w1, w1, w2
-        AppendWord(out, 0x1AC10800U);
+        AppendWord(out, 0x1AC20821U);
+    } else if (op == vb::OPCode::I64_DIV_S) {
+        // sdiv x1, x1, x2
+        AppendWord(out, 0x9AC20C21U);
+    } else if (op == vb::OPCode::I64_DIV_U) {
+        // udiv x1, x1, x2
+        AppendWord(out, 0x9AC20821U);
     }
 
     // str x1, [sp]  用原 x 的栈槽保存结果
@@ -250,6 +256,8 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
             break;
         case vb::OPCode::I32_DIV_S:
         case vb::OPCode::I32_DIV_U:
+        case vb::OPCode::I64_DIV_S:
+        case vb::OPCode::I64_DIV_U:
             EmitDiv(out, instr.opcode);
             break;
         case vb::OPCode::I32_LT_S:
@@ -411,18 +419,26 @@ inline bool RunAssert(const Module &module, const CompiledModule &compiled) {
         for (size_t i = 0; i < test.act.args.size() && i < slots.size(); ++i) {
             slots[i] = test.act.args[i].value;
         }
+
+        // Check if the test case has invalid operation
+        if (!test.text.empty()) {
+            std::cout << "INVALID: " << test.text << '\n';
+            continue;
+        }
+        // Execute the function
         const uint64_t result = jit.entry(slots.data());
+
         // VOID function
         if (test.exp.args.empty()) {
-            std::cout << "PASS " << test.act.field << '\n';
+            std::cout << "PASS: " << test.act.field << '\n';
             continue;
         }
         // Compare the result with expection
         const uint64_t expected = test.exp.args[0].value;
         if (result == expected) {
-            std::cout << "PASS " << test.act.field << " => " << result << '\n';
+            std::cout << "PASS: " << test.act.field << " => " << result << '\n';
         } else {
-            std::cout << "FAIL " << test.act.field << " got " << result << " expected " << expected << '\n';
+            std::cout << "FAIL: " << test.act.field << " got " << result << " expected " << expected << '\n';
             res = false;
         }
     }

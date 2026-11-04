@@ -1,17 +1,17 @@
 add.wat
-   ↓
+↓
 wat2wasm
-   ↓
+↓
 读取 .wasm 字节
-   ↓
+↓
 解析 section 和 opcode
-   ↓
+↓
 生成 Arm64 机器码
-   ↓
+↓
 写入可执行内存
-   ↓
+↓
 调用生成的函数
-   ↓
+↓
 测试、格式检查、CI
 
 ## Shared Parser
@@ -30,6 +30,7 @@ This target uses `wat2wasm` to generate `build/chapter01-test/add.wasm` and runs
 ## 执行swq 检查
 
 ### Code format
+
 ```shell
 find -regex '.*\.\(cpp\|hpp\|c\|h\)' -print0 |
   xargs -0 clang-format-19 -style=file --Werror --dry-run
@@ -48,11 +49,13 @@ xargs -0 -r -n 1 sh -c '
 ```
 
 ### Code static checker
+
 ```shell
 set(CMAKE_CXX_CLANG_TIDY clang-tidy --config-file ${CMAKE_CURRENT_LIST_DIR}/.clang-tidy "--header-filter=${CMAKE_CURRENT_LIST_DIR}/(src|tests)/.*")
 ```
 
 ### Code dynamic checker
+
 ```shell
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 ```

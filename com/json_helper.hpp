@@ -34,12 +34,15 @@ inline unsigned long long StringToUnsignedLongLong(std::string_view text) { // N
     return value;
 }
 
-inline Argument ReadArgument(const json &node) {
+inline Argument ReadArgument(const json &node, const std::string &type = "assert_return") {
     Argument argument;
     node.at("type").get_to(argument.type);
     // wast2json stores numeric values as std::strings, for example "10".
-    const std::string text = node.at("value").get<std::string>();
-    argument.value = StringToUnsignedLongLong(text);
+    if (type != "assert_trap") {
+        const std::string text = node.at("value").get<std::string>();
+        argument.value = StringToUnsignedLongLong(text);
+    }
+
     return argument;
 }
 
@@ -74,10 +77,28 @@ inline Commands ReadJson(const std::string &json_path) {
             action.at("type").get_to(function.act.type);
             action.at("field").get_to(function.act.field);
             for (const json &arg : action.at("args")) {
-                function.act.args.push_back(ReadArgument(arg));
+                function.act.args.push_back(ReadArgument(arg, type));
             }
             for (const json &item : command.at("expected")) {
-                function.exp.args.push_back(ReadArgument(item));
+                function.exp.args.push_back(ReadArgument(item, type));
+            }
+            md.fun.push_back(function);
+        } else if (type == "assert_trap") {
+            if (md.file_name.empty()) {
+                std::cout << "assert_trap appears before any module\n";
+                continue;
+            }
+            Function function;
+            function.type = type;
+            const json &action = command.at("action");
+            action.at("type").get_to(function.act.type);
+            action.at("field").get_to(function.act.field);
+            for (const json &arg : action.at("args")) {
+                function.act.args.push_back(ReadArgument(arg, type));
+            }
+            command.at("text").get_to(function.text);
+            for (const json &item : command.at("expected")) {
+                function.exp.args.push_back(ReadArgument(item, type));
             }
             md.fun.push_back(function);
         }

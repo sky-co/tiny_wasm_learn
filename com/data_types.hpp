@@ -25,6 +25,7 @@ struct Function {
     std::string type;
     Action act;
     Expected exp;
+    std::string text;
 };
 struct Module {
     std::string file_name;

@@ -38,6 +38,13 @@ add_compile_options(-Wall -Wextra)
 add_executable(hello Chapter00/hello.c)
 add_executable(parse_wasm Chapter01/main.cpp)
 
+# IDE-only targets to populate compile_commands.json for Chapter02-05 sources.
+# They are excluded from default builds and only used for IntelliSense indexing.
+add_executable(chapter02_index EXCLUDE_FROM_ALL Chapter02/chapter02_main.cpp)
+add_executable(chapter03_index EXCLUDE_FROM_ALL Chapter03/chapter03_main.cpp)
+add_executable(chapter04_index EXCLUDE_FROM_ALL Chapter04/chapter04_main.cpp)
+add_executable(chapter05_index EXCLUDE_FROM_ALL Chapter05/chapter05_main.cpp)
+
 if(BUILD_TESTING)
     add_test(
         NAME chapter02_arm64_gtest
@@ -55,9 +62,16 @@ if(BUILD_TESTING)
     )
     add_test(
         NAME chapter04_arm64_gtest
-        COMMAND bash "${CMAKE_SOURCE_DIR}/run_arm64_test.sh" Chapter03 arithmetic.wast
+        COMMAND bash "${CMAKE_SOURCE_DIR}/run_arm64_test.sh" Chapter04 if.wast
     )
     set_tests_properties(chapter04_arm64_gtest PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    add_test(
+        NAME chapter05_arm64_gtest
+        COMMAND bash "${CMAKE_SOURCE_DIR}/run_arm64_test.sh" Chapter05 div.wast
+    )
+    set_tests_properties(chapter05_arm64_gtest PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 endif()

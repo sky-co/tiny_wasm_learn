@@ -14,29 +14,29 @@
         "tab.unfocusedActiveBorder": "#ffcc00",
         "tab.unfocusedActiveBorderTop": "#ffcc00",
         "statusBar.inactiveBackground": "#215732",
-        "activityBar.activeBackground": "#fa1b49",
-        "activityBar.background": "#fa1b49",
+        "activityBar.activeBackground": "#2f7c47",
+        "activityBar.background": "#2f7c47",
         "activityBar.foreground": "#e7e7e7",
         "activityBar.inactiveForeground": "#e7e7e799",
-        "activityBarBadge.background": "#155e02",
+        "activityBarBadge.background": "#422c74",
         "activityBarBadge.foreground": "#e7e7e7",
-        "activityBarTop.activeBackground": "#fa1b49",
-        "activityBarTop.background": "#fa1b49",
+        "activityBarTop.activeBackground": "#2f7c47",
+        "activityBarTop.background": "#2f7c47",
         "activityBarTop.foreground": "#e7e7e7",
         "activityBarTop.inactiveForeground": "#e7e7e799",
         "commandCenter.border": "#e7e7e799",
         "commandCenter.foreground": "#e7e7e7",
-        "sash.hoverBorder": "#fa1b49",
-        "statusBar.background": "#dd0531",
-        "statusBar.debuggingBackground": "#dd0531",
+        "sash.hoverBorder": "#2f7c47",
+        "statusBar.background": "#215732",
+        "statusBar.debuggingBackground": "#215732",
         "statusBar.debuggingForeground": "#e7e7e7",
         "statusBar.foreground": "#e7e7e7",
-        "statusBarItem.hoverBackground": "#fa1b49",
-        "statusBarItem.remoteBackground": "#0e3e01",
+        "statusBarItem.hoverBackground": "#2f7c47",
+        "statusBarItem.remoteBackground": "#1b122e",
         "statusBarItem.remoteForeground": "#e7e7e7",
-        "titleBar.activeBackground": "#dd0531",
+        "titleBar.activeBackground": "#215732",
         "titleBar.activeForeground": "#e7e7e7",
-        "titleBar.inactiveBackground": "#dd053199",
+        "titleBar.inactiveBackground": "#21573299",
         "titleBar.inactiveForeground": "#e7e7e799"
     },
     "peacock.color": "#215732",
@@ -47,16 +47,44 @@
     "C_Cpp.autocomplete": "default",
     "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.compilerPath": "/usr/bin/aarch64-linux-gnu-g++",
+    "C_Cpp.default.systemIncludePath": [
+        "/usr/aarch64-linux-gnu/include/c++/13",
+        "/usr/aarch64-linux-gnu/include/c++/13/aarch64-linux-gnu",
+        "/usr/aarch64-linux-gnu/include/c++/13/backward",
+        "/usr/lib/gcc-cross/aarch64-linux-gnu/13/include",
+        "/usr/aarch64-linux-gnu/include",
+        "/usr/include"
+    ],
     "C_Cpp.default.cppStandard": "c++17",
     "C_Cpp.default.cStandard": "c11",
     "C_Cpp.default.intelliSenseMode": "linux-gcc-arm64",
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
     "C_Cpp.default.includePath": [
-        "${workspaceFolder}/**"
+        "${workspaceFolder}/Chapter*/**",
+        "${workspaceFolder}/com/**"
     ],
     "C_Cpp.default.browse.path": [
-        "${workspaceFolder}"
+        "${workspaceFolder}/Chapter00",
+        "${workspaceFolder}/Chapter01",
+        "${workspaceFolder}/Chapter02",
+        "${workspaceFolder}/Chapter03",
+        "${workspaceFolder}/Chapter04",
+        "${workspaceFolder}/Chapter05",
+        "${workspaceFolder}/com"
     ],
     "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": false,
+    "C_Cpp.workspaceParsingPriority": "medium",
+    "C_Cpp.workspaceSymbols": "All",
+    "files.watcherExclude": {
+        "**/build/**": true,
+        "**/.cache/**": true,
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true
+    },
+    "search.exclude": {
+        "**/build/**": true,
+        "**/.cache/**": true
+    },
     "files.associations": {
         "*.hpp": "cpp"
     },
@@ -64,6 +92,7 @@
     "github.copilot.enable": {
         "*": true
     },
+    "editor.multiCursorModifier": "alt",
     "editor.definitionLinkOpensInPeek": false,
     "editor.gotoLocation.multipleDefinitions": "goto",
     "editor.gotoLocation.multipleDeclarations": "goto",

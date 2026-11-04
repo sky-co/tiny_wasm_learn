@@ -28,6 +28,7 @@ ctest --test-dir build --output-on-failure -R '^chapter0[23]_arm64_gtest$'
 For another chapter following the same source naming convention, reuse this script and add its CTest registration in [CMakeLists.txt](CMakeLists.txt); no chapter-specific shell script is needed.
 
 Promote understanding words
+
 ```text
 请帮我解析本章的学习目标和分解需要完成的任务，并提供建议、工具和最佳实践
 ```

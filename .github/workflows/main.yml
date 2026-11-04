@@ -26,6 +26,8 @@ jobs:
         run: ctest --test-dir build --output-on-failure -R chapter03_arm64_gtest
       - name: Run Chapter04 Arm64 gtest
         run: ctest --test-dir build --output-on-failure -R chapter04_arm64_gtest
+      - name: Run Chapter05 Arm64 gtest
+        run: ctest --test-dir build --output-on-failure -R chapter05_arm64_gtest
       - name: Clang-tidy Check
         id: clang_tidy
         if: ${{ always() }}
