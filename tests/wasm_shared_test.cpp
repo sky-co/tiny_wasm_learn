@@ -11,7 +11,7 @@
 namespace {
 
 uint32_t ReadEnvU32(const char *name, uint32_t fallback, bool *has_value) {
-    const char *raw = std::getenv(name);
+    const char *const raw = std::getenv(name);
     if (raw == nullptr || raw[0] == '\0') {
         *has_value = false;
         return fallback;
