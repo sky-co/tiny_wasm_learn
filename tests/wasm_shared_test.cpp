@@ -2,10 +2,25 @@
 #include <cstdlib>
 #include <gtest/gtest.h>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include "../com/json_helper.hpp"
 #include "../com/wasm_helper.hpp"
+
+namespace {
+
+uint32_t ReadEnvU32(const char *name, uint32_t fallback, bool *has_value) {
+    const char *raw = std::getenv(name);
+    if (raw == nullptr || raw[0] == '\0') {
+        *has_value = false;
+        return fallback;
+    }
+    *has_value = true;
+    return static_cast<uint32_t>(std::strtoul(raw, nullptr, 10));
+}
+
+} // namespace
 
 TEST(WasmCompilerLearnTest, ParseUnsignedInteger) {
     EXPECT_EQ(StringToUnsignedLongLong("0"), 0ULL);
@@ -26,16 +41,33 @@ TEST(WasmCompilerLearnTest, ReadLargeArgument) {
     const Argument i32_argument = ReadArgument(json{{"type", "i32"}, {"value", "4294967295"}});
     EXPECT_EQ(i32_argument.type, "i32");
     EXPECT_EQ(i32_argument.value, 0xFFFFFFFFULL);
+
     const Argument i64_argument = ReadArgument(json{{"type", "i64"}, {"value", "18446744073709551615"}});
     EXPECT_EQ(i64_argument.type, "i64");
     EXPECT_EQ(i64_argument.value, 0xFFFFFFFFFFFFFFFFULL);
 }
 
-TEST(WasmCompilerLearnTest, Chapter02Test) {
+TEST(WasmCompilerLearnTest, RunWasmAsserts) {
     const char *const json_env = std::getenv("WASM_TEST_JSON");
-    const char *const json_path = json_env != nullptr ? json_env : "./local.json";
+    const char *const json_path = json_env != nullptr ? json_env : "./test.json";
+
+    bool expect_module_count_set = false;
+    const uint32_t expect_module_count = ReadEnvU32("WASM_EXPECT_MODULES", 0U, &expect_module_count_set);
+
+    bool expect_asserts_per_module_set = false;
+    const uint32_t expect_asserts_per_module = ReadEnvU32("WASM_EXPECT_ASSERTS_PER_MODULE", 0U, &expect_asserts_per_module_set);
+
     const Commands cmd = ReadJson(json_path);
     ASSERT_FALSE(cmd.ls.empty()) << "No Wasm modules were loaded from " << json_path;
+    if (expect_module_count_set) {
+        ASSERT_EQ(cmd.ls.size(), static_cast<size_t>(expect_module_count));
+    }
+    if (expect_asserts_per_module_set) {
+        for (const Module &module : cmd.ls) {
+            ASSERT_EQ(module.fun.size(), static_cast<size_t>(expect_asserts_per_module));
+        }
+    }
+
     PrintCommands(cmd);
 
     std::vector<CompiledModule> compiled;

@@ -12,8 +12,9 @@ chapter_name="${chapter,,}"
 wast_file="$2"
 cli_name="${chapter_name}_main"
 chapter_dir="$root_dir/$chapter"
+shared_test_src="$root_dir/tests/wasm_shared_test.cpp"
 
-for source in "$chapter_dir/$wast_file" "$chapter_dir/${chapter_name}_main.cpp" "$chapter_dir/wasm_${chapter_name}_test.cpp"; do
+for source in "$chapter_dir/$wast_file" "$chapter_dir/${chapter_name}_main.cpp" "$shared_test_src"; do
     if [[ ! -f "$source" ]]; then
         printf 'Required source not found: %s\n' "$source" >&2
         exit 1
@@ -57,7 +58,7 @@ wast2json "$chapter_dir/$wast_file" -o "$build_dir/test.json"
     -std=c++17 -Wall -Wextra -O0 -g -pthread \
     -I"$gtest_source_dir/googletest/include" \
     -I"$gtest_source_dir/googletest" \
-    "$chapter_dir/wasm_${chapter_name}_test.cpp" \
+    "$shared_test_src" \
     "$gtest_source_dir/googletest/src/gtest-all.cc" \
     "$gtest_source_dir/googletest/src/gtest_main.cc" \
     -o "$build_dir/wasm_${chapter_name}_test"
