@@ -213,6 +213,9 @@ class ByteReader {
                 } else if (opcode == vb::OPCode::I64_SUB) {
                     // i64.sub
                     std::cout << " I64.Sub opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I64_MUL) {
+                    // i64.mul
+                    std::cout << " I64.Mul opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::I32_DIV_S) {
                     // i32.div_s
                     std::cout << " I32.Div_S opcode " << static_cast<unsigned>(opcode);
