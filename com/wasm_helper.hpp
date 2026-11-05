@@ -25,6 +25,46 @@ inline void PrintCommands(const Commands &cmd) {
     }
 }
 
+inline bool IsInputOverflow(const std::string &type, uint64_t value) {
+    if (type == "i32") {
+        if (value > 0xFFFFFFFFU) {
+            return true;
+        }
+    } else if (type == "i64") {
+        if (value > 0xFFFFFFFFFFFFFFFFU) {
+            return true;
+        }
+    } else {
+        // Do nothing
+    }
+
+    return false;
+}
+
+inline bool IsArgumentOverflow(const Function &test) {
+    const Action &act = test.act;
+    for (const Argument &arg : act.args) {
+        if (IsInputOverflow(arg.type, arg.value)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool IsDivideByZero(const Function &test) {
+    const Action &act = test.act;
+    if (act.field == "div_s" || act.field == "div_u") {
+        if (act.args.size() > 1 && act.args[1].value == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+inline bool IsInputValid(const Function &test) {
+    const bool res = IsArgumentOverflow(test) || IsDivideByZero(test);
+    return !res;
+}
+
 inline void AppendByte(std::vector<uint8_t> &out, uint8_t value) {
     out.push_back(value);
 }
@@ -421,7 +461,7 @@ inline bool RunAssert(const Module &module, const CompiledModule &compiled) {
         }
 
         // Check if the test case has invalid operation
-        if (!test.text.empty()) {
+        if (!IsInputValid(test)) {
             std::cout << "INVALID: " << test.text << '\n';
             continue;
         }
@@ -431,6 +471,10 @@ inline bool RunAssert(const Module &module, const CompiledModule &compiled) {
         // VOID function
         if (test.exp.args.empty()) {
             std::cout << "PASS: " << test.act.field << '\n';
+            continue;
+        }
+        if (IsInputOverflow(test.exp.args[0].type, test.exp.args[0].value)) {
+            std::cout << "OVERFLOW: " << test.text << '\n';
             continue;
         }
         // Compare the result with expection
