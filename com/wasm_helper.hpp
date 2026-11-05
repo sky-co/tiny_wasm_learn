@@ -7,6 +7,7 @@
 
 #include "byte_reader.hpp"
 #include "data_types.hpp"
+#include "json_helper.hpp"
 
 inline void PrintCommands(const Commands &cmd) {
     for (const Module &module : cmd.ls) {
@@ -261,6 +262,7 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
 
     std::vector<uint8_t> out;
     std::vector<IfContext> if_stack;
+    bool reached_function_end = false;
     for (size_t i = 0; i < func.body.size(); ++i) {
         const Instruction &instr = func.body[i];
         switch (instr.opcode) {
@@ -341,6 +343,7 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
                 AppendWord(out, 0xAA1F03E0U);
             }
             AppendWord(out, 0xD65F03C0U);
+            reached_function_end = true;
             break;
         case vb::OPCode::NOP:
             // NOP does nothing, just continue
@@ -356,6 +359,11 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
 
     if (!if_stack.empty()) {
         std::cout << "cannot compile IF without matching END" << '\n';
+        return {};
+    }
+
+    if (!reached_function_end) {
+        std::cout << "cannot compile function without END" << '\n';
         return {};
     }
 
@@ -391,6 +399,10 @@ inline void BindJITTable(const std::vector<ExpFunc> &exp, const std::vector<Comp
 
     module.entries.resize(machine.size());
     for (size_t i = 0; i < machine.size(); ++i) {
+        if (machine[i].empty()) {
+            std::cout << "failed to compile function " << i << '\n';
+            continue;
+        }
         uint8_t *const entry = module.code.Emit(machine[i]);
         if (entry == nullptr) {
             std::cout << "failed to emit JIT entry for function " << i << '\n';
@@ -487,4 +499,35 @@ inline bool RunAssert(const Module &module, const CompiledModule &compiled) {
         }
     }
     return res;
+}
+
+inline bool RunWasmCommands(const Commands &cmd) {
+    if (cmd.ls.empty()) {
+        std::cout << "No Wasm modules were loaded" << '\n';
+        return false;
+    }
+
+    PrintCommands(cmd);
+
+    std::vector<CompiledModule> compiled;
+    for (const Module &module : cmd.ls) {
+        compiled.push_back(ParseWasm(module.file_name));
+    }
+
+    bool res = true;
+    for (size_t i = 0; i < cmd.ls.size(); ++i) {
+        std::cout << "JIT map " << compiled[i].file_name << " functions " << compiled[i].functions.size() << '\n';
+        res &= RunAssert(cmd.ls[i], compiled[i]);
+    }
+
+    return res;
+}
+
+inline int RunWasmJson(const std::string &json_path) {
+    if (json_path.empty()) {
+        std::cout << "json path is empty" << '\n';
+        return 1;
+    }
+    const Commands cmd = ReadJson(json_path);
+    return RunWasmCommands(cmd) ? 0 : 1;
 }
