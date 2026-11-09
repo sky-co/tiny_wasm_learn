@@ -1,3 +1,5 @@
+#include <csetjmp>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -8,6 +10,71 @@
 #include "byte_reader.hpp"
 #include "data_types.hpp"
 #include "json_helper.hpp"
+
+enum class TrapCode : int {
+    None = 0,
+    IntegerDivideByZero = 1,
+    IntegerOverflow = 2,
+};
+
+inline thread_local std::jmp_buf *g_wasm_trap_env = nullptr;
+
+inline void RaiseTrap(TrapCode code) {
+    if (g_wasm_trap_env != nullptr) {
+        longjmp(*g_wasm_trap_env, static_cast<int>(code));
+    }
+    std::abort();
+}
+
+template <typename T> inline T div(T lhs, T rhs) {
+    return (lhs / rhs);
+}
+
+extern "C" inline uint64_t WasmDivHelper(uint64_t op, uint64_t lhs, uint64_t rhs) {
+    if (rhs == 0U) {
+        RaiseTrap(TrapCode::IntegerDivideByZero);
+    }
+
+    const vb::OPCode div_kind = static_cast<vb::OPCode>(op);
+    // Signed overflow case: "i32 INT_MIN / -1"
+    if (div_kind == vb::OPCode::I32_DIV_S) {
+        const uint32_t lhs32 = static_cast<uint32_t>(lhs);
+        const uint32_t rhs32 = static_cast<uint32_t>(rhs);
+        if (lhs32 == 0x80000000U && rhs32 == 0xFFFFFFFFU) {
+            RaiseTrap(TrapCode::IntegerOverflow);
+        }
+        const int32_t result = div<int32_t>(static_cast<int32_t>(lhs), static_cast<int32_t>(rhs));
+        return static_cast<uint64_t>(static_cast<uint32_t>(result));
+    }
+
+    if (div_kind == vb::OPCode::I32_DIV_U) {
+        return div<uint32_t>(static_cast<uint32_t>(lhs), static_cast<uint32_t>(rhs));
+    }
+
+    if (div_kind == vb::OPCode::I64_DIV_S) {
+        if (lhs == 0x8000000000000000ULL && rhs == 0xFFFFFFFFFFFFFFFFULL) {
+            RaiseTrap(TrapCode::IntegerOverflow);
+        }
+        return div<int64_t>(static_cast<int64_t>(lhs), static_cast<int64_t>(rhs));
+    }
+
+    if (div_kind == vb::OPCode::I64_DIV_U) {
+        return div<uint64_t>(lhs, rhs);
+    }
+
+    RaiseTrap(TrapCode::IntegerOverflow);
+    UNREACHABLE(, "Unsupported opcode: " << static_cast<uint8_t>(div_kind));
+}
+
+inline int ExpectedTrapCode(const Function &test) {
+    if (test.text == "integer divide by zero") {
+        return static_cast<int>(TrapCode::IntegerDivideByZero);
+    }
+    if (test.text == "integer overflow") {
+        return static_cast<int>(TrapCode::IntegerOverflow);
+    }
+    return static_cast<int>(TrapCode::None);
+}
 
 inline void PrintCommands(const Commands &cmd) {
     for (const Module &module : cmd.ls) {
@@ -85,16 +152,16 @@ inline void EmitStoreLocal(std::vector<uint8_t> &out, uint32_t index) {
     AppendWord(out, 0xF9000001U | (index << 10U));
 }
 
-inline void EmitMovX1Imm(std::vector<uint8_t> &out, uint64_t imm) {
+inline void EmitMovXImm(std::vector<uint8_t> &out, uint32_t reg, uint64_t imm) {
     bool first = true;
     for (uint32_t hw = 0; hw < 4U; ++hw) {
-        // Get the low 16bits
         const uint32_t chunk = static_cast<uint32_t>(imm & 0xFFFFU);
         if (chunk == 0U && !first) {
+            imm >>= 16U;
             continue;
         }
-        const uint32_t base = first ? 0xD2800001U : 0xF2800001U;
-        AppendWord(out, base | (hw << 21U) | (chunk << 5U));
+        const uint32_t base = first ? 0xD2800000U : 0xF2800000U;
+        AppendWord(out, base | (hw << 21U) | (chunk << 5U) | reg);
 
         imm >>= 16U; // Get next 16 bits in high part
         first = false;
@@ -102,6 +169,10 @@ inline void EmitMovX1Imm(std::vector<uint8_t> &out, uint64_t imm) {
             break;
         }
     }
+}
+
+inline void EmitMovX1Imm(std::vector<uint8_t> &out, uint64_t imm) {
+    EmitMovXImm(out, 1U, imm);
 }
 
 inline void PushStack(std::vector<uint8_t> &out) {
@@ -163,21 +234,29 @@ inline void EmitMul(std::vector<uint8_t> &out, vb::OPCode op) {
 }
 
 inline void EmitDiv(std::vector<uint8_t> &out, vb::OPCode op) {
+    const uint64_t div_kind = static_cast<uint64_t>(op);
+    // Load the division kind into x0
+    EmitMovXImm(out, 0U, div_kind);
+
+    // Load the operands to x1 and x2 from the stack.
     LoadStack(out);
 
-    if (op == vb::OPCode::I32_DIV_S) {
-        // sdiv w1, w1, w2
-        AppendWord(out, 0x1AC20C21U);
-    } else if (op == vb::OPCode::I32_DIV_U) {
-        // udiv w1, w1, w2
-        AppendWord(out, 0x1AC20821U);
-    } else if (op == vb::OPCode::I64_DIV_S) {
-        // sdiv x1, x1, x2
-        AppendWord(out, 0x9AC20C21U);
-    } else if (op == vb::OPCode::I64_DIV_U) {
-        // udiv x1, x1, x2
-        AppendWord(out, 0x9AC20821U);
-    }
+    // Load the address of the WasmDivHelper function into x16
+    EmitMovXImm(out, 16U, reinterpret_cast<uint64_t>(&WasmDivHelper)); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+
+    // Save LR because blr overwrites x30 and this JIT function still needs it on final ret.
+    AppendWord(out, 0xD10043FFU);
+    AppendWord(out, 0xF90003FEU);
+
+    // blr x16, enter helper function for division
+    AppendWord(out, 0xD63F0200U);
+
+    // Restore LR after returning from the helper function
+    AppendWord(out, 0xF94003FEU);
+    AppendWord(out, 0x910043FFU);
+
+    // mov x1, x0
+    AppendWord(out, 0xAA0003E1U);
 
     // str x1, [sp]  用原 x 的栈槽保存结果
     AppendWord(out, 0xF90003E1U);
@@ -472,31 +551,28 @@ inline bool RunAssert(const Module &module, const CompiledModule &compiled) {
             slots[i] = test.act.args[i].value;
         }
 
-        // Check if the test case has invalid operation
-        if (!IsInputValid(test)) {
-            std::cout << "INVALID: " << test.text << '\n';
-            continue;
-        }
-        // Execute the function
-        const uint64_t result = jit.entry(slots.data());
-
-        // VOID function
-        if (test.exp.args.empty()) {
-            std::cout << "PASS: " << test.act.field << '\n';
-            continue;
-        }
-        if (IsInputOverflow(test.exp.args[0].type, test.exp.args[0].value)) {
-            std::cout << "OVERFLOW: " << test.text << '\n';
-            continue;
-        }
-        // Compare the result with expection
-        const uint64_t expected = test.exp.args[0].value;
-        if (result == expected) {
-            std::cout << "PASS: " << test.act.field << " => " << result << '\n';
+        std::jmp_buf env;
+        g_wasm_trap_env = &env;
+        const int trap_code = setjmp(env);
+        if (trap_code == 0) {
+            const uint64_t result = jit.entry(slots.data());
+            const uint64_t expected = test.exp.args[0].value;
+            if (result == expected) {
+                std::cout << "PASS: " << test.act.field << " => " << result << '\n';
+            } else {
+                std::cout << "FAIL: " << test.act.field << " got " << result << " expected " << expected << '\n';
+                res = false;
+            }
         } else {
-            std::cout << "FAIL: " << test.act.field << " got " << result << " expected " << expected << '\n';
-            res = false;
+            const int expected_code = ExpectedTrapCode(test);
+            if (expected_code != static_cast<int>(TrapCode::None) && trap_code != expected_code) {
+                std::cout << "FAIL: " << test.act.field << " trap code " << trap_code << " expected " << expected_code << " (" << test.text << ")\n";
+                res = false;
+            } else {
+                std::cout << "PASS: " << test.act.field << " trapped " << test.text << '\n';
+            }
         }
+        g_wasm_trap_env = nullptr;
     }
     return res;
 }

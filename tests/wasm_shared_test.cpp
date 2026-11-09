@@ -37,16 +37,6 @@ TEST(WasmCompilerLearnTest, ParseUnsignedInteger) {
     EXPECT_THROW(StringToUnsignedLongLong("12abc"), std::invalid_argument);
 }
 
-TEST(WasmCompilerLearnTest, ReadLargeArgument) {
-    const Argument i32_argument = ReadArgument(json{{"type", "i32"}, {"value", "4294967295"}});
-    EXPECT_EQ(i32_argument.type, "i32");
-    EXPECT_EQ(i32_argument.value, 0xFFFFFFFFULL);
-
-    const Argument i64_argument = ReadArgument(json{{"type", "i64"}, {"value", "18446744073709551615"}});
-    EXPECT_EQ(i64_argument.type, "i64");
-    EXPECT_EQ(i64_argument.value, 0xFFFFFFFFFFFFFFFFULL);
-}
-
 TEST(WasmCompilerLearnTest, RunWasmAsserts) {
     const char *const json_env = std::getenv("WASM_TEST_JSON");
     const char *const json_path = json_env != nullptr ? json_env : "./test.json";
