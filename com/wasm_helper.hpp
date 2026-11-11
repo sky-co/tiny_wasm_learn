@@ -21,7 +21,7 @@ inline thread_local std::jmp_buf *g_wasm_trap_env = nullptr;
 
 inline void RaiseTrap(TrapCode code) {
     if (g_wasm_trap_env != nullptr) {
-        longjmp(*g_wasm_trap_env, static_cast<int>(code));
+        longjmp(*g_wasm_trap_env, static_cast<int>(code)); // NOLINT(cert-err52-cpp)
     }
     std::abort();
 }
@@ -553,7 +553,7 @@ inline bool RunAssert(const Module &module, const CompiledModule &compiled) {
 
         std::jmp_buf env;
         g_wasm_trap_env = &env;
-        const int trap_code = setjmp(env);
+        const int trap_code = setjmp(env); // NOLINT(cert-err52-cpp)
         if (trap_code == 0) {
             const uint64_t result = jit.entry(slots.data());
             const uint64_t expected = test.exp.args[0].value;
