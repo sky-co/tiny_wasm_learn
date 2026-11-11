@@ -556,6 +556,11 @@ inline bool RunAssert(const Module &module, const CompiledModule &compiled) {
         const int trap_code = setjmp(env); // NOLINT(cert-err52-cpp)
         if (trap_code == 0) {
             const uint64_t result = jit.entry(slots.data());
+            if (test.exp.args.empty()) {
+                std::cout << "PASS: " << test.act.field << '\n';
+                g_wasm_trap_env = nullptr;
+                continue;
+            }
             const uint64_t expected = test.exp.args[0].value;
             if (result == expected) {
                 std::cout << "PASS: " << test.act.field << " => " << result << '\n';
