@@ -272,6 +272,16 @@ inline void EmitI32LtS(std::vector<uint8_t> &out) {
     AppendWord(out, 0xF90003E1U);
 }
 
+inline void EmitI32GeS(std::vector<uint8_t> &out) {
+    LoadStack(out);
+    // cmp w1, w2
+    AppendWord(out, 0x6B02003FU);
+    // cset w1, ge
+    AppendWord(out, 0x1A9FA7E1U);
+    // str x1, [sp]  用原 x 的栈槽保存结果
+    AppendWord(out, 0xF90003E1U);
+}
+
 inline size_t EmitIF(std::vector<uint8_t> &out) {
     AppendWord(out, 0xB94003E1U);
     AppendWord(out, 0x910043FFU);
@@ -341,6 +351,7 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
 
     std::vector<uint8_t> out;
     std::vector<IfContext> if_stack;
+    std::vector<IfContext> block_stack;
     bool reached_function_end = false;
     for (size_t i = 0; i < func.body.size(); ++i) {
         const Instruction &instr = func.body[i];
@@ -384,6 +395,9 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
         case vb::OPCode::I32_LT_S:
             EmitI32LtS(out);
             break;
+        case vb::OPCode::I32_GE_S:
+            EmitI32GeS(out);
+            break;
         case vb::OPCode::IF:
             if_stack.push_back(IfContext{EmitIF(out), static_cast<size_t>(-1)});
             break;
@@ -397,6 +411,9 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
                 std::cout << "failed to patch IF branch to ELSE" << '\n';
                 return {};
             }
+            break;
+        case vb::OPCode::BLOCK:
+            block_stack.push_back(IfContext{EmitIF(out), static_cast<size_t>(-1)});
             break;
         case vb::OPCode::END:
             if (!if_stack.empty()) {
