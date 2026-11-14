@@ -244,12 +244,15 @@ class ByteReader {
                     std::cout << " Block opcode " << static_cast<unsigned>(opcode);
                     const int8_t block_type = static_cast<int8_t>(ReadU8());
                     instr.immediate = block_type;
+                    ++block_depth;
                     std::cout << " block-type " << static_cast<int32_t>(block_type);
                 } else if (opcode == vb::OPCode::END) {
                     std::cout << " End opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::BR) {
+                    instr.index = ReadU32Leb128();
                     std::cout << " Br opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::BR_IF) {
+                    instr.index = ReadU32Leb128();
                     std::cout << " Br_If opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::BR_TABLE) {
                     std::cout << " Br_Table opcode " << static_cast<unsigned>(opcode);

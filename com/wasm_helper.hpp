@@ -93,46 +93,6 @@ inline void PrintCommands(const Commands &cmd) {
     }
 }
 
-inline bool IsInputOverflow(const std::string &type, uint64_t value) {
-    if (type == "i32") {
-        if (value > 0xFFFFFFFFU) {
-            return true;
-        }
-    } else if (type == "i64") {
-        if (value > 0xFFFFFFFFFFFFFFFFU) {
-            return true;
-        }
-    } else {
-        // Do nothing
-    }
-
-    return false;
-}
-
-inline bool IsArgumentOverflow(const Function &test) {
-    const Action &act = test.act;
-    for (const Argument &arg : act.args) {
-        if (IsInputOverflow(arg.type, arg.value)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-inline bool IsDivideByZero(const Function &test) {
-    const Action &act = test.act;
-    if (act.field == "div_s" || act.field == "div_u") {
-        if (act.args.size() > 1 && act.args[1].value == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-inline bool IsInputValid(const Function &test) {
-    const bool res = IsArgumentOverflow(test) || IsDivideByZero(test);
-    return !res;
-}
-
 inline void AppendByte(std::vector<uint8_t> &out, uint8_t value) {
     out.push_back(value);
 }
@@ -169,6 +129,48 @@ inline void EmitMovXImm(std::vector<uint8_t> &out, uint32_t reg, uint64_t imm) {
             break;
         }
     }
+}
+
+inline bool PatchCBZW1(std::vector<uint8_t> &out, size_t branch_pos, size_t target_pos) {
+    if (branch_pos + 4U > out.size()) {
+        return false;
+    }
+    const int64_t delta = static_cast<int64_t>(target_pos) - static_cast<int64_t>(branch_pos);
+    if ((delta % 4) != 0) {
+        return false;
+    }
+    const int64_t imm19_signed = delta / 4;
+    if (imm19_signed < -262144LL || imm19_signed > 262143LL) {
+        return false;
+    }
+
+    const uint32_t imm19 = static_cast<uint32_t>(imm19_signed) & 0x7FFFFU;
+    const uint32_t word = 0x34000001U | (imm19 << 5U);
+    for (size_t byte_index = 0; byte_index < 4U; ++byte_index) {
+        out[branch_pos + byte_index] = static_cast<uint8_t>(word >> (byte_index * 8U));
+    }
+    return true;
+}
+
+inline bool PatchB(std::vector<uint8_t> &out, size_t branch_pos, size_t target_pos) {
+    if (branch_pos + 4U > out.size()) {
+        return false;
+    }
+    const int64_t delta = static_cast<int64_t>(target_pos) - static_cast<int64_t>(branch_pos);
+    if ((delta % 4) != 0) {
+        return false;
+    }
+    const int64_t imm26_signed = delta / 4;
+    if (imm26_signed < -33554432LL || imm26_signed > 33554431LL) {
+        return false;
+    }
+
+    const uint32_t imm26 = static_cast<uint32_t>(imm26_signed) & 0x3FFFFFFU;
+    const uint32_t word = 0x14000000U | imm26;
+    for (size_t byte_index = 0; byte_index < 4U; ++byte_index) {
+        out[branch_pos + byte_index] = static_cast<uint8_t>(word >> (byte_index * 8U));
+    }
+    return true;
 }
 
 inline void EmitMovX1Imm(std::vector<uint8_t> &out, uint64_t imm) {
@@ -277,9 +279,16 @@ inline void EmitI32GeS(std::vector<uint8_t> &out) {
     // cmp w1, w2
     AppendWord(out, 0x6B02003FU);
     // cset w1, ge
-    AppendWord(out, 0x1A9FA7E1U);
+    AppendWord(out, 0x1A9FB7E1U);
     // str x1, [sp]  用原 x 的栈槽保存结果
     AppendWord(out, 0xF90003E1U);
+}
+
+inline void EmitBRIf(std::vector<uint8_t> &out, size_t target_pos) {
+    // cbz w1, <target_pos>; imm19 is patched after the target is known.
+    const size_t branch_pos = out.size();
+    AppendWord(out, 0x34000001U);
+    PatchCBZW1(out, branch_pos, target_pos);
 }
 
 inline size_t EmitIF(std::vector<uint8_t> &out) {
@@ -289,48 +298,6 @@ inline size_t EmitIF(std::vector<uint8_t> &out) {
     // cbz w1, <else_or_end_if>; imm19 is patched after the else/end target is known.
     AppendWord(out, 0x34000001U);
     return branch_pos;
-}
-
-inline bool PatchCBZW1(std::vector<uint8_t> &out, size_t branch_pos, size_t target_pos) {
-    if (branch_pos + 4U > out.size()) {
-        return false;
-    }
-    const int64_t delta = static_cast<int64_t>(target_pos) - static_cast<int64_t>(branch_pos);
-    if ((delta % 4) != 0) {
-        return false;
-    }
-    const int64_t imm19_signed = delta / 4;
-    if (imm19_signed < -262144LL || imm19_signed > 262143LL) {
-        return false;
-    }
-
-    const uint32_t imm19 = static_cast<uint32_t>(imm19_signed) & 0x7FFFFU;
-    const uint32_t word = 0x34000001U | (imm19 << 5U);
-    for (size_t byte_index = 0; byte_index < 4U; ++byte_index) {
-        out[branch_pos + byte_index] = static_cast<uint8_t>(word >> (byte_index * 8U));
-    }
-    return true;
-}
-
-inline bool PatchB(std::vector<uint8_t> &out, size_t branch_pos, size_t target_pos) {
-    if (branch_pos + 4U > out.size()) {
-        return false;
-    }
-    const int64_t delta = static_cast<int64_t>(target_pos) - static_cast<int64_t>(branch_pos);
-    if ((delta % 4) != 0) {
-        return false;
-    }
-    const int64_t imm26_signed = delta / 4;
-    if (imm26_signed < -33554432LL || imm26_signed > 33554431LL) {
-        return false;
-    }
-
-    const uint32_t imm26 = static_cast<uint32_t>(imm26_signed) & 0x3FFFFFFU;
-    const uint32_t word = 0x14000000U | imm26;
-    for (size_t byte_index = 0; byte_index < 4U; ++byte_index) {
-        out[branch_pos + byte_index] = static_cast<uint8_t>(word >> (byte_index * 8U));
-    }
-    return true;
 }
 
 inline size_t EmitELSE(std::vector<uint8_t> &out, size_t branch_pos) {
@@ -343,27 +310,45 @@ inline size_t EmitELSE(std::vector<uint8_t> &out, size_t branch_pos) {
     return jump_to_end_pos;
 }
 
+inline void EmitStackCleanup(std::vector<uint8_t> &out, size_t slots) {
+    while (slots != 0U) {
+        const size_t chunk = slots > 255U ? 255U : slots;
+        AppendWord(out, 0x910003FFU | (static_cast<uint32_t>(chunk * 16U) << 10U));
+        slots -= chunk;
+    }
+}
+
 inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
-    struct IfContext {
-        size_t branch_to_else_or_end = 0U;
-        size_t branch_to_end = static_cast<size_t>(-1);
+    struct ControlContext {
+        vb::OPCode opcode;
+        size_t stack_depth;
+        size_t result_count;
+        size_t branch_to_else_or_end;
+        size_t branch_to_end;
+        std::vector<size_t> branches;
     };
 
     std::vector<uint8_t> out;
-    std::vector<IfContext> if_stack;
-    std::vector<IfContext> block_stack;
+    std::vector<ControlContext> control_stack;
+    size_t stack_depth = 0U;
+    const auto emit_return = [&]() {
+        AppendWord(out, func.results.empty() ? 0xAA1F03E0U : 0xF94003E0U);
+        EmitStackCleanup(out, stack_depth);
+        AppendWord(out, 0xD65F03C0U);
+    };
     bool reached_function_end = false;
-    for (size_t i = 0; i < func.body.size(); ++i) {
-        const Instruction &instr = func.body[i];
+    for (const Instruction &instr : func.body) {
         switch (instr.opcode) {
         case vb::OPCode::LOCAL_GET:
             EmitLoadLocal(out, instr.index);
             PushStack(out);
+            ++stack_depth;
             break;
         case vb::OPCode::LOCAL_SET:
             AppendWord(out, 0xF94003E1U);
             AppendWord(out, 0x910043FFU);
             EmitStoreLocal(out, instr.index);
+            --stack_depth;
             break;
         case vb::OPCode::LOCAL_TEE:
             AppendWord(out, 0xF94003E1U);
@@ -373,79 +358,128 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
         case vb::OPCode::I64_CONST:
             EmitMovX1Imm(out, static_cast<uint64_t>(instr.immediate));
             PushStack(out);
+            ++stack_depth;
             break;
         case vb::OPCode::I32_ADD:
         case vb::OPCode::I64_ADD:
             EmitAdd(out, instr.opcode);
+            --stack_depth;
             break;
         case vb::OPCode::I32_SUB:
         case vb::OPCode::I64_SUB:
             EmitSub(out, instr.opcode);
+            --stack_depth;
             break;
         case vb::OPCode::I32_MUL:
         case vb::OPCode::I64_MUL:
             EmitMul(out, instr.opcode);
+            --stack_depth;
             break;
         case vb::OPCode::I32_DIV_S:
         case vb::OPCode::I32_DIV_U:
         case vb::OPCode::I64_DIV_S:
         case vb::OPCode::I64_DIV_U:
             EmitDiv(out, instr.opcode);
+            --stack_depth;
             break;
         case vb::OPCode::I32_LT_S:
             EmitI32LtS(out);
+            --stack_depth;
             break;
         case vb::OPCode::I32_GE_S:
             EmitI32GeS(out);
+            --stack_depth;
             break;
         case vb::OPCode::IF:
-            if_stack.push_back(IfContext{EmitIF(out), static_cast<size_t>(-1)});
+        case vb::OPCode::BLOCK: {
+            size_t branch_pos = 0U;
+            if (instr.opcode == vb::OPCode::IF) {
+                branch_pos = EmitIF(out);
+                --stack_depth;
+            }
+            if (instr.immediate != 0x40 && instr.immediate != -64 && instr.immediate != 0x7F && instr.immediate != 0x7E) {
+                std::cout << "unsupported control block type" << '\n';
+                return {};
+            }
+            const size_t results = (instr.immediate == 0x40 || instr.immediate == -64) ? 0U : 1U;
+            control_stack.push_back(ControlContext{instr.opcode, stack_depth, results, branch_pos, static_cast<size_t>(-1), {}});
             break;
+        }
         case vb::OPCode::ELSE:
-            if (if_stack.empty()) {
+            if (control_stack.empty() || control_stack.back().opcode != vb::OPCode::IF) {
                 std::cout << "cannot compile ELSE without matching IF" << '\n';
                 return {};
             }
-            if_stack.back().branch_to_end = EmitELSE(out, if_stack.back().branch_to_else_or_end);
-            if (if_stack.back().branch_to_end == static_cast<size_t>(-1)) {
-                std::cout << "failed to patch IF branch to ELSE" << '\n';
+            control_stack.back().branch_to_end = EmitELSE(out, control_stack.back().branch_to_else_or_end);
+            if (control_stack.back().branch_to_end == static_cast<size_t>(-1)) {
+                return {};
+            }
+            stack_depth = control_stack.back().stack_depth;
+            break;
+        case vb::OPCode::END:
+            if (!control_stack.empty()) {
+                const ControlContext context = control_stack.back();
+                control_stack.pop_back();
+                if (context.opcode == vb::OPCode::IF) {
+                    if (context.branch_to_end == static_cast<size_t>(-1)) {
+                        if (!PatchCBZW1(out, context.branch_to_else_or_end, out.size())) {
+                            return {};
+                        }
+                    } else if (!PatchB(out, context.branch_to_end, out.size())) {
+                        return {};
+                    }
+                }
+                for (const size_t branch_pos : context.branches) {
+                    if (!PatchB(out, branch_pos, out.size())) {
+                        return {};
+                    }
+                }
+                stack_depth = context.stack_depth + context.result_count;
+                break;
+            }
+            emit_return();
+            reached_function_end = true;
+            break;
+        case vb::OPCode::BR:
+        case vb::OPCode::BR_IF: {
+            const bool conditional = instr.opcode == vb::OPCode::BR_IF;
+            size_t skip_pos = 0U;
+            if (conditional) {
+                skip_pos = EmitIF(out);
+                --stack_depth;
+            }
+            if (instr.index > control_stack.size()) {
+                std::cout << "invalid branch label depth" << '\n';
+                return {};
+            }
+            if (instr.index == control_stack.size()) {
+                emit_return();
+            } else {
+                ControlContext &target = control_stack[control_stack.size() - 1U - instr.index];
+                if (stack_depth < target.stack_depth + target.result_count) {
+                    std::cout << "insufficient branch operands" << '\n';
+                    return {};
+                }
+                const size_t discarded = stack_depth - target.stack_depth - target.result_count;
+                if (target.result_count != 0U && discarded != 0U) {
+                    AppendWord(out, 0xF94003E1U);
+                }
+                EmitStackCleanup(out, discarded);
+                if (target.result_count != 0U && discarded != 0U) {
+                    AppendWord(out, 0xF90003E1U);
+                }
+                target.branches.push_back(out.size());
+                AppendWord(out, 0x14000000U);
+            }
+            if (conditional && !PatchCBZW1(out, skip_pos, out.size())) {
                 return {};
             }
             break;
-        case vb::OPCode::BLOCK:
-            block_stack.push_back(IfContext{EmitIF(out), static_cast<size_t>(-1)});
-            break;
-        case vb::OPCode::END:
-            if (!if_stack.empty()) {
-                const IfContext context = if_stack.back();
-                if_stack.pop_back();
-                if (context.branch_to_end == static_cast<size_t>(-1)) {
-                    if (!PatchCBZW1(out, context.branch_to_else_or_end, out.size())) {
-                        std::cout << "failed to patch IF branch to END" << '\n';
-                        return {};
-                    }
-                } else if (!PatchB(out, context.branch_to_end, out.size())) {
-                    std::cout << "failed to patch ELSE branch to END" << '\n';
-                    return {};
-                } else {
-                }
-                break;
-            }
-
-            if (!func.results.empty()) {
-                AppendWord(out, 0xF94003E0U);
-                AppendWord(out, 0x910043FFU);
-            } else {
-                AppendWord(out, 0xAA1F03E0U);
-            }
-            AppendWord(out, 0xD65F03C0U);
-            reached_function_end = true;
-            break;
+        }
         case vb::OPCode::NOP:
-            // NOP does nothing, just continue
             break;
         case vb::OPCode::RETURN:
-            // RETURN does nothing, just continue
+            emit_return();
             break;
         default:
             std::cout << "cannot compile opcode " << static_cast<unsigned>(instr.opcode) << '\n';
@@ -453,20 +487,9 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
         }
     }
 
-    if (!if_stack.empty()) {
-        std::cout << "cannot compile IF without matching END" << '\n';
+    if (!control_stack.empty() || !reached_function_end) {
+        std::cout << "cannot compile control block or function without END" << '\n';
         return {};
-    }
-
-    if (!reached_function_end) {
-        std::cout << "cannot compile function without END" << '\n';
-        return {};
-    }
-
-    // 如果生成的机器码末尾没有返回指令，就补上“返回 0”的结尾
-    if (out.size() < 4U || out[out.size() - 4U] != 0xC0U) {
-        AppendWord(out, 0xAA1F03E0U);
-        AppendWord(out, 0xD65F03C0U);
     }
     return out;
 }

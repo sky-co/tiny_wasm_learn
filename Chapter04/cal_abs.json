@@ -1,5 +1,5 @@
 {"source_filename": "cal_abs.wast",
  "commands": [
-  {"type": "module", "line": 1, "filename": "cal_abs.0.wasm"}, 
-  {"type": "assert_return", "line": 23, "action": {"type": "invoke", "field": "abs", "args": [{"type": "i32", "value": "4294967295"}]}, "expected": [{"type": "i32", "value": "1"}]}, 
+  {"type": "module", "line": 1, "filename": "cal_abs.0.wasm"},
+  {"type": "assert_return", "line": 23, "action": {"type": "invoke", "field": "abs", "args": [{"type": "i32", "value": "4294967295"}]}, "expected": [{"type": "i32", "value": "1"}]},
   {"type": "assert_return", "line": 24, "action": {"type": "invoke", "field": "abs", "args": [{"type": "i32", "value": "1"}]}, "expected": [{"type": "i32", "value": "1"}]}]}
