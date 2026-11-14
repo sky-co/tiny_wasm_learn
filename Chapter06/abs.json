@@ -2,4 +2,8 @@
  "commands": [
   {"type": "module", "line": 1, "filename": "abs.0.wasm"}, 
   {"type": "assert_return", "line": 22, "action": {"type": "invoke", "field": "abs", "args": [{"type": "i32", "value": "4294967295"}]}, "expected": [{"type": "i32", "value": "1"}]}, 
-  {"type": "assert_return", "line": 23, "action": {"type": "invoke", "field": "abs", "args": [{"type": "i32", "value": "1"}]}, "expected": [{"type": "i32", "value": "1"}]}]}
+  {"type": "assert_return", "line": 23, "action": {"type": "invoke", "field": "abs", "args": [{"type": "i32", "value": "1"}]}, "expected": [{"type": "i32", "value": "1"}]}, 
+  {"type": "assert_return", "line": 24, "action": {"type": "invoke", "field": "abs", "args": [{"type": "i32", "value": "0"}]}, "expected": [{"type": "i32", "value": "0"}]}, 
+  {"type": "assert_return", "line": 25, "action": {"type": "invoke", "field": "abs", "args": [{"type": "i32", "value": "4294967173"}]}, "expected": [{"type": "i32", "value": "123"}]}, 
+  {"type": "assert_return", "line": 26, "action": {"type": "invoke", "field": "abs", "args": [{"type": "i32", "value": "2147483647"}]}, "expected": [{"type": "i32", "value": "2147483647"}]}, 
+  {"type": "assert_return", "line": 27, "action": {"type": "invoke", "field": "abs", "args": [{"type": "i32", "value": "2147483648"}]}, "expected": [{"type": "i32", "value": "2147483648"}]}]}
