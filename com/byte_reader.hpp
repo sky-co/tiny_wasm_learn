@@ -240,26 +240,36 @@ class ByteReader {
                     std::cout << " I32.Lt_S opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::I32_GE_S) {
                     std::cout << " I32.Ge_S opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I32_LE_U) {
+                    std::cout << " I32.Le_U opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I32_CTZ) {
+                    std::cout << " I32.Ctz opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I64_CTZ) {
+                    std::cout << " I64.Ctz opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I32_EQZ) {
+                    std::cout << " I32.Eqz opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::BLOCK) {
                     std::cout << " Block opcode " << static_cast<unsigned>(opcode);
                     const int8_t block_type = static_cast<int8_t>(ReadU8());
                     instr.immediate = block_type;
                     ++block_depth;
                     std::cout << " block-type " << static_cast<int32_t>(block_type);
-                } else if (opcode == vb::OPCode::END) {
-                    std::cout << " End opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::BR) {
                     instr.index = ReadU32Leb128();
                     std::cout << " Br opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::BR_IF) {
                     instr.index = ReadU32Leb128();
                     std::cout << " Br_If opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::DROP) {
+                    std::cout << " Drop opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::BR_TABLE) {
                     std::cout << " Br_Table opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::NOP) {
                     std::cout << " Nop opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::RETURN) {
                     std::cout << " Return opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::END) {
+                    std::cout << " End opcode " << static_cast<unsigned>(opcode);
                 } else {
                     std::cout << " Unsupported opcode " << static_cast<unsigned>(opcode);
                     break;

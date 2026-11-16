@@ -284,6 +284,54 @@ inline void EmitI32GeS(std::vector<uint8_t> &out) {
     AppendWord(out, 0xF90003E1U);
 }
 
+inline void EmitLeU(std::vector<uint8_t> &out, vb::OPCode op) {
+    LoadStack(out);
+
+    if (op == vb::OPCode::I32_LE_U) {
+        // cmp w1, w2
+        AppendWord(out, 0x6B02003FU);
+        // cset w1, le
+        AppendWord(out, 0x1A9FD7E1U);
+    } else {
+        // cmp x1, x2
+        AppendWord(out, 0xEB02003FU);
+        // cset x1, le
+        AppendWord(out, 0x9A9FD7E1U);
+    }
+
+    // str x1, [sp]  用原 x 的栈槽保存结果
+    AppendWord(out, 0xF90003E1U);
+}
+
+inline void EmitCtz(std::vector<uint8_t> &out, vb::OPCode op) {
+    // Unary operation: replace the top stack value without popping a slot.
+    AppendWord(out, 0xF94003E1U);
+    if (op == vb::OPCode::I32_CTZ) {
+        // rbit w1, w1
+        AppendWord(out, 0x5AC00021U);
+        // clz w1, w1
+        AppendWord(out, 0x5AC01021U);
+    } else if (op == vb::OPCode::I64_CTZ) {
+        // rbit x1, x1
+        AppendWord(out, 0xDAC00021U);
+        // clz x1, x1
+        AppendWord(out, 0xDAC01021U);
+    }
+    // str x1, [sp]  用原 x 的栈槽保存结果
+    AppendWord(out, 0xF90003E1U);
+}
+
+inline void EmitEqz(std::vector<uint8_t> &out, vb::OPCode op) {
+    AppendWord(out, 0xF94003E1U); // ldr x1, [sp]
+    if (op == vb::OPCode::I32_EQZ) {
+        AppendWord(out, 0x7100003FU); // cmp w1, #0
+    } else if (op == vb::OPCode::I64_EQZ) {
+        AppendWord(out, 0xF100003FU); // cmp x1, #0
+    }
+    AppendWord(out, 0x1A9F17E1U); // cset w1, eq
+    AppendWord(out, 0xF90003E1U); // str x1, [sp]
+}
+
 inline void EmitBRIf(std::vector<uint8_t> &out, size_t target_pos) {
     // cbz w1, <target_pos>; imm19 is patched after the target is known.
     const size_t branch_pos = out.size();
@@ -313,29 +361,22 @@ inline size_t EmitELSE(std::vector<uint8_t> &out, size_t branch_pos) {
 inline void EmitStackCleanup(std::vector<uint8_t> &out, size_t slots) {
     while (slots != 0U) {
         const size_t chunk = slots > 255U ? 255U : slots;
+        // add sp, sp, #(chunk * 16)
         AppendWord(out, 0x910003FFU | (static_cast<uint32_t>(chunk * 16U) << 10U));
         slots -= chunk;
     }
 }
 
-inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
-    struct ControlContext {
-        vb::OPCode opcode;
-        size_t stack_depth;
-        size_t result_count;
-        size_t branch_to_else_or_end;
-        size_t branch_to_end;
-        std::vector<size_t> branches;
-    };
+inline void EmitReturn(std::vector<uint8_t> &out, const CompiledFunctions &func, size_t stack_depth) {
+    AppendWord(out, func.results.empty() ? 0xAA1F03E0U : 0xF94003E0U);
+    EmitStackCleanup(out, stack_depth);
+    AppendWord(out, 0xD65F03C0U);
+}
 
+inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
     std::vector<uint8_t> out;
     std::vector<ControlContext> control_stack;
     size_t stack_depth = 0U;
-    const auto emit_return = [&]() {
-        AppendWord(out, func.results.empty() ? 0xAA1F03E0U : 0xF94003E0U);
-        EmitStackCleanup(out, stack_depth);
-        AppendWord(out, 0xD65F03C0U);
-    };
     bool reached_function_end = false;
     for (const Instruction &instr : func.body) {
         switch (instr.opcode) {
@@ -390,6 +431,18 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
             EmitI32GeS(out);
             --stack_depth;
             break;
+        case vb::OPCode::I32_LE_U:
+            EmitLeU(out, instr.opcode);
+            --stack_depth;
+            break;
+        case vb::OPCode::I32_CTZ:
+        case vb::OPCode::I64_CTZ:
+            EmitCtz(out, instr.opcode);
+            break;
+        case vb::OPCode::I32_EQZ:
+            EmitEqz(out, instr.opcode);
+            --stack_depth;
+            break;
         case vb::OPCode::IF:
         case vb::OPCode::BLOCK: {
             size_t branch_pos = 0U;
@@ -416,6 +469,11 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
             }
             stack_depth = control_stack.back().stack_depth;
             break;
+        case vb::OPCode::DROP: {
+            EmitStackCleanup(out, 1U);
+            --stack_depth;
+            break;
+        }
         case vb::OPCode::END:
             if (!control_stack.empty()) {
                 const ControlContext context = control_stack.back();
@@ -437,12 +495,12 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
                 stack_depth = context.stack_depth + context.result_count;
                 break;
             }
-            emit_return();
+            EmitReturn(out, func, stack_depth);
             reached_function_end = true;
             break;
         case vb::OPCode::BR:
         case vb::OPCode::BR_IF: {
-            const bool conditional = instr.opcode == vb::OPCode::BR_IF;
+            const bool conditional = (instr.opcode == vb::OPCode::BR_IF);
             size_t skip_pos = 0U;
             if (conditional) {
                 skip_pos = EmitIF(out);
@@ -453,7 +511,7 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
                 return {};
             }
             if (instr.index == control_stack.size()) {
-                emit_return();
+                EmitReturn(out, func, stack_depth);
             } else {
                 ControlContext &target = control_stack[control_stack.size() - 1U - instr.index];
                 if (stack_depth < target.stack_depth + target.result_count) {
@@ -479,7 +537,7 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
         case vb::OPCode::NOP:
             break;
         case vb::OPCode::RETURN:
-            emit_return();
+            EmitReturn(out, func, stack_depth);
             break;
         default:
             std::cout << "cannot compile opcode " << static_cast<unsigned>(instr.opcode) << '\n';
@@ -596,7 +654,7 @@ inline bool RunAssert(const Module &module, const CompiledModule &compiled) {
         const int trap_code = setjmp(env); // NOLINT(cert-err52-cpp)
         if (trap_code == 0) {
             const uint64_t result = jit.entry(slots.data());
-            if (test.exp.args.empty()) {
+            if (test.exp.args.size() == 0) {
                 std::cout << "PASS: " << test.act.field << '\n';
                 g_wasm_trap_env = nullptr;
                 continue;

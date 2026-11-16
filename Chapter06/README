@@ -22,3 +22,32 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --target block
 ctest --test-dir build --output-on-failure -R chapter06_arm64_gtest
 ```
+
+
+## References
+- https://www.scs.stanford.edu/~zyedidia/arm64/
+
+
+## Tips
+- Run the Chapter06 CLI and GoogleTest assertions from the repository root:
+```shell
+bash run_arm64_test.sh Chapter06 block.wast
+```
+
+- eqz 指令
+ARM64 没有 eqz 指令。 eqz 是 WebAssembly 指令，需要翻译为 ARM64 的 cmp + cset 组合。
+```shell
+cmp w1, #0 -> cset w1, eq // i32.eqz
+cmp x1, #0 -> cset w1, eq // i64.eqz
+```
+cmp 设置零标志 Z，cset ..., eq 在 Z == 1 时写入 1，否则写入 0。两种 Wasm 指令都返回 i32，因此都使用 cset w1, eq
+cset: https://www.scs.stanford.edu/~zyedidia/arm64/cset_csinc.html
+
+
+- le_u
+ARM64 没有 le_u 指令。 le_u 是 WebAssembly 指令，需要翻译为 ARM64 的 cmp + cset 组合。
+```shell
+cmp w1, w2 -> cset w1, le // i32.le_u
+cmp x1, x2 -> cset x1, le // i64.le_u
+```
+cmp 设置零标志 Z，cset ..., le 在 Z == 1 或者 N != V 时写入 1，否则写入 0。两种 Wasm 指令都返回 i32，因此 i32 使用 cset w1, le，i64 使用 cset x1, le

@@ -11,6 +11,6 @@ int main() {
 
     // Parse json file
     const char *const json_env = std::getenv("WASM_TEST_JSON");
-    const char *const json_path = json_env != nullptr ? json_env : "./abs.json";
+    const char *const json_path = json_env != nullptr ? json_env : "./block.json";
     return RunWasmJson(json_path);
 }
