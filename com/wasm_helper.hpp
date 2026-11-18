@@ -332,6 +332,25 @@ inline void EmitEqz(std::vector<uint8_t> &out, vb::OPCode op) {
     AppendWord(out, 0xF90003E1U); // str x1, [sp]
 }
 
+inline void EmitEq(std::vector<uint8_t> &out, vb::OPCode op) {
+    AppendWord(out, 0xF94003E1U); // ldr x1, [sp]
+    if (op == vb::OPCode::I32_EQ) {
+        AppendWord(out, 0x6B02003FU); // cmp w1, w2
+    } else if (op == vb::OPCode::I64_EQ) {
+        AppendWord(out, 0xEB02003FU); // cmp x1, x2
+    }
+    AppendWord(out, 0x1A9F17E1U); // cset w1, eq
+    AppendWord(out, 0xF90003E1U); // str x1, [sp]
+}
+
+inline size_t EmitLoop(std::vector<uint8_t> &out) {
+    AppendWord(out, 0xB94003E1U); // ldr x1, [sp]
+    AppendWord(out, 0x910043FFU); // mov xzr, x1
+    const size_t branch_pos = out.size();
+    AppendWord(out, 0x34000001U);
+    return branch_pos;
+}
+
 inline void EmitBRIf(std::vector<uint8_t> &out, size_t target_pos) {
     // cbz w1, <target_pos>; imm19 is patched after the target is known.
     const size_t branch_pos = out.size();
@@ -443,8 +462,17 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
             EmitEqz(out, instr.opcode);
             --stack_depth;
             break;
+        case vb::OPCode::I32_EQ:
+            EmitEq(out, instr.opcode);
+            --stack_depth;
+            break;
+        // case vb::OPCode::LOOP:
+        //     EmitLoop(out);
+        //     --stack_depth;
+        //     break;
         case vb::OPCode::IF:
-        case vb::OPCode::BLOCK: {
+        case vb::OPCode::BLOCK:
+        case vb::OPCode::LOOP: {
             size_t branch_pos = 0U;
             if (instr.opcode == vb::OPCode::IF) {
                 branch_pos = EmitIF(out);
@@ -529,6 +557,7 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
                 target.branches.push_back(out.size());
                 AppendWord(out, 0x14000000U);
             }
+
             if (conditional && !PatchCBZW1(out, skip_pos, out.size())) {
                 return {};
             }

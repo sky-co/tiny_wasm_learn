@@ -1,0 +1,16 @@
+{"source_filename": "loop.wast",
+ "commands": [
+  {"type": "module", "line": 1, "filename": "loop.0.wasm"}, 
+  {"type": "assert_return", "line": 48, "action": {"type": "invoke", "field": "effects", "args": []}, "expected": [{"type": "i32", "value": "1"}]}, 
+  {"type": "assert_return", "line": 50, "action": {"type": "invoke", "field": "while", "args": [{"type": "i64", "value": "0"}]}, "expected": [{"type": "i64", "value": "1"}]}, 
+  {"type": "assert_return", "line": 51, "action": {"type": "invoke", "field": "while", "args": [{"type": "i64", "value": "1"}]}, "expected": [{"type": "i64", "value": "1"}]}, 
+  {"type": "assert_return", "line": 52, "action": {"type": "invoke", "field": "while", "args": [{"type": "i64", "value": "2"}]}, "expected": [{"type": "i64", "value": "2"}]}, 
+  {"type": "assert_return", "line": 53, "action": {"type": "invoke", "field": "while", "args": [{"type": "i64", "value": "3"}]}, "expected": [{"type": "i64", "value": "6"}]}, 
+  {"type": "assert_return", "line": 54, "action": {"type": "invoke", "field": "while", "args": [{"type": "i64", "value": "5"}]}, "expected": [{"type": "i64", "value": "120"}]}, 
+  {"type": "assert_return", "line": 55, "action": {"type": "invoke", "field": "while", "args": [{"type": "i64", "value": "20"}]}, "expected": [{"type": "i64", "value": "2432902008176640000"}]}, 
+  {"type": "assert_return", "line": 57, "action": {"type": "invoke", "field": "for", "args": [{"type": "i64", "value": "0"}]}, "expected": [{"type": "i64", "value": "1"}]}, 
+  {"type": "assert_return", "line": 58, "action": {"type": "invoke", "field": "for", "args": [{"type": "i64", "value": "1"}]}, "expected": [{"type": "i64", "value": "1"}]}, 
+  {"type": "assert_return", "line": 59, "action": {"type": "invoke", "field": "for", "args": [{"type": "i64", "value": "2"}]}, "expected": [{"type": "i64", "value": "2"}]}, 
+  {"type": "assert_return", "line": 60, "action": {"type": "invoke", "field": "for", "args": [{"type": "i64", "value": "3"}]}, "expected": [{"type": "i64", "value": "6"}]}, 
+  {"type": "assert_return", "line": 61, "action": {"type": "invoke", "field": "for", "args": [{"type": "i64", "value": "5"}]}, "expected": [{"type": "i64", "value": "120"}]}, 
+  {"type": "assert_return", "line": 62, "action": {"type": "invoke", "field": "for", "args": [{"type": "i64", "value": "20"}]}, "expected": [{"type": "i64", "value": "2432902008176640000"}]}]}

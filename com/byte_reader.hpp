@@ -229,11 +229,12 @@ class ByteReader {
                     // i64.div_u
                     std::cout << " I64.Div_U opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::IF) {
-                    const int8_t block_type = static_cast<int8_t>(ReadU8());
+                    std::cout << " If opcode " << static_cast<unsigned>(opcode);
+                    const int8_t if_type = static_cast<int8_t>(ReadU8());
                     // Ox40 indicates an empty block type in WebAssembly
-                    instr.immediate = block_type;
+                    instr.immediate = if_type;
                     ++block_depth;
-                    std::cout << " block-type " << static_cast<int32_t>(block_type);
+                    std::cout << " if-type " << static_cast<int32_t>(if_type);
                 } else if (opcode == vb::OPCode::ELSE) {
                     std::cout << " ELSE opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::I32_LT_S) {
@@ -248,6 +249,14 @@ class ByteReader {
                     std::cout << " I64.Ctz opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::I32_EQZ) {
                     std::cout << " I32.Eqz opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I32_EQ) {
+                    std::cout << " I32.Eq opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::LOOP) {
+                    const int8_t loop_type = static_cast<int8_t>(ReadU8());
+                    std::cout << " Loop opcode " << static_cast<unsigned>(opcode);
+                    instr.immediate = loop_type;
+                    ++block_depth;
+                    std::cout << " loop-type " << static_cast<int32_t>(loop_type);
                 } else if (opcode == vb::OPCode::BLOCK) {
                     std::cout << " Block opcode " << static_cast<unsigned>(opcode);
                     const int8_t block_type = static_cast<int8_t>(ReadU8());
