@@ -66,6 +66,15 @@ struct CompiledFunctions {
     std::vector<Instruction> body;
 };
 
+struct ControlContext {
+    vb::OPCode opcode;
+    size_t stack_depth;
+    size_t result_count;
+    size_t branch_to_else_or_end;
+    size_t branch_to_end;
+    std::vector<size_t> branches;
+};
+
 // The machine-code ABI is uniform: arguments and locals occupy 64-bit slots.
 // JitFunc retains the Wasm signature so i32 and i64 calls are marshalled correctly.
 using JitEntry = uint64_t (*)(uint64_t *slots);

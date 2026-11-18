@@ -140,6 +140,41 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "Debug Arm64 - Ch06",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Chapter06/block",
+            "cwd": "${workspaceFolder}/Chapter06",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb-multiarch",
+            "miDebuggerArgs": "--nx",
+            "miDebuggerServerAddress": "127.0.0.1:2345",
+            "stopAtEntry": true,
+            "externalConsole": false,
+            "setupCommands": [
+                {
+                    "description": "Do not prompt for debuginfod",
+                    "text": "set debuginfod enabled off",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set AArch64 before connecting",
+                    "text": "set architecture aarch64",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Find the AArch64 dynamic linker and libc",
+                    "text": "set sysroot /usr/aarch64-linux-gnu",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }
