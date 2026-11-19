@@ -459,8 +459,8 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
             EmitCtz(out, instr.opcode);
             break;
         case vb::OPCode::I32_EQZ:
+        case vb::OPCode::I64_EQZ:
             EmitEqz(out, instr.opcode);
-            --stack_depth;
             break;
         case vb::OPCode::I32_EQ:
             EmitEq(out, instr.opcode);
