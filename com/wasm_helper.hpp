@@ -466,10 +466,6 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
             EmitEq(out, instr.opcode);
             --stack_depth;
             break;
-        // case vb::OPCode::LOOP:
-        //     EmitLoop(out);
-        //     --stack_depth;
-        //     break;
         case vb::OPCode::IF:
         case vb::OPCode::BLOCK:
         case vb::OPCode::LOOP: {
@@ -478,12 +474,16 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
                 branch_pos = EmitIF(out);
                 --stack_depth;
             }
+            size_t loop_head_pos = static_cast<size_t>(-1);
+            if (instr.opcode == vb::OPCode::LOOP) {
+                loop_head_pos = out.size();
+            }
             if (instr.immediate != 0x40 && instr.immediate != -64 && instr.immediate != 0x7F && instr.immediate != 0x7E) {
                 std::cout << "unsupported control block type" << '\n';
                 return {};
             }
             const size_t results = (instr.immediate == 0x40 || instr.immediate == -64) ? 0U : 1U;
-            control_stack.push_back(ControlContext{instr.opcode, stack_depth, results, branch_pos, static_cast<size_t>(-1), {}});
+            control_stack.push_back(ControlContext{instr.opcode, stack_depth, results, branch_pos, static_cast<size_t>(-1), loop_head_pos, {}});
             break;
         }
         case vb::OPCode::ELSE:

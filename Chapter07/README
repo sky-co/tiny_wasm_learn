@@ -4,26 +4,26 @@ Compile
 wast2json: https://github.com/WebAssembly/wabt/blob/main/docs/wast2json.md
 
 ```shell
-$ wast2json block.wast -o block.json
+$ wast2json chapter07.wast -o chapter07.json
 ```
 
 ```shell
-$ wasm-objdump -d -x block.0.wasm
+$ wasm-objdump -d -x chapter07.0.wasm
 ```
 
 ## Debug with aarch64-linux
 ```shell
-$ aarch64-linux-gnu-g++ -std=c++17 -Wall -Wextra -O0 -g chapter06_main.cpp -o block
-$ qemu-aarch64 -L /usr/aarch64-linux-gnu ./block
+$ aarch64-linux-gnu-g++ -std=c++17 -Wall -Wextra -O0 -g chapter07_main.cpp -o loop
+$ qemu-aarch64 -L /usr/aarch64-linux-gnu ./loop
 
-$ qemu-aarch64 -g 2345 -L /usr/aarch64-linux-gnu ./block
+$ qemu-aarch64 -g 2345 -L /usr/aarch64-linux-gnu ./loop
 vscode debug(F5)
 ```
 
 ### Build and test from the repository root
 ```shell
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build --target block
+$ cmake --build build --target loop
 ctest --test-dir build --output-on-failure -R chapter07_arm64_gtest
 ```
 

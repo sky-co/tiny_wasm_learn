@@ -1,5 +1,18 @@
 (module
+  (func (export "as-if-then") (result i32)
+    (if (result i32) (i32.const 1) (then (loop (result i32) (i32.const 1))) (else (i32.const 2)))
+  )
 
+  (func (export "as-if-else") (result i32)
+    (if (result i32) (i32.const 1) (then (i32.const 2)) (else (loop (result i32) (i32.const 1))))
+  )
+
+  (func (export "as-br_if-first") (result i32)
+    (block (result i32) (br_if 0 (loop (result i32) (i32.const 1)) (i32.const 2)))
+  )
+  (func (export "as-br_if-last") (result i32)
+    (block (result i32) (br_if 0 (i32.const 2) (loop (result i32) (i32.const 1))))
+  )
   (func $fx (export "effects") (result i32)
     (local i32)
     (block
@@ -45,6 +58,10 @@
   )
 )
 
+(assert_return (invoke "as-if-then") (i32.const 1))
+(assert_return (invoke "as-if-else") (i32.const 2))
+(assert_return (invoke "as-br_if-first") (i32.const 1))
+(assert_return (invoke "as-br_if-last") (i32.const 2))
 (assert_return (invoke "effects") (i32.const 1))
 
 (assert_return (invoke "while" (i64.const 0)) (i64.const 1))

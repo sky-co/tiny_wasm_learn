@@ -72,6 +72,7 @@ struct ControlContext {
     size_t result_count;
     size_t branch_to_else_or_end;
     size_t branch_to_end;
+    size_t loop_head_pos;
     std::vector<size_t> branches;
 };
 
