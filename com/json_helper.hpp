@@ -66,7 +66,7 @@ inline Commands ReadJson(const std::string &json_path) {
             }
             md = Module();
             command.at("filename").get_to(md.file_name);
-        } else if (type == "assert_return") {
+        } else {
             if (md.file_name.empty()) {
                 std::cout << "assert_return appears before any module\n";
                 continue;
@@ -79,24 +79,11 @@ inline Commands ReadJson(const std::string &json_path) {
             for (const json &arg : action.at("args")) {
                 function.act.args.push_back(ReadArgument(arg));
             }
-            for (const json &item : command.at("expected")) {
-                function.exp.args.push_back(ReadArgument(item));
+
+            if (type == "assert_trap") {
+                command.at("text").get_to(function.text);
             }
-            md.fun.push_back(function);
-        } else if (type == "assert_trap") {
-            if (md.file_name.empty()) {
-                std::cout << "assert_trap appears before any module\n";
-                continue;
-            }
-            Function function;
-            function.type = type;
-            const json &action = command.at("action");
-            action.at("type").get_to(function.act.type);
-            action.at("field").get_to(function.act.field);
-            for (const json &arg : action.at("args")) {
-                function.act.args.push_back(ReadArgument(arg));
-            }
-            command.at("text").get_to(function.text);
+
             for (const json &item : command.at("expected")) {
                 function.exp.args.push_back(ReadArgument(item));
             }

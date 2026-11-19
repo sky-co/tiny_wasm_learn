@@ -333,7 +333,7 @@ inline void EmitEqz(std::vector<uint8_t> &out, vb::OPCode op) {
 }
 
 inline void EmitEq(std::vector<uint8_t> &out, vb::OPCode op) {
-    AppendWord(out, 0xF94003E1U); // ldr x1, [sp]
+    LoadStack(out);
     if (op == vb::OPCode::I32_EQ) {
         AppendWord(out, 0x6B02003FU); // cmp w1, w2
     } else if (op == vb::OPCode::I64_EQ) {
@@ -546,18 +546,23 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
                     std::cout << "insufficient branch operands" << '\n';
                     return {};
                 }
-                const size_t discarded = stack_depth - target.stack_depth - target.result_count;
-                if (target.result_count != 0U && discarded != 0U) {
-                    AppendWord(out, 0xF94003E1U);
+                if (target.opcode == vb::OPCode::LOOP) {
+                    const size_t branch_pos = out.size();
+                    AppendWord(out, 0x14000000U);
+                    PatchB(out, branch_pos, target.loop_head_pos);
+                } else {
+                    const size_t discarded = stack_depth - target.stack_depth - target.result_count;
+                    if (target.result_count != 0U && discarded != 0U) {
+                        AppendWord(out, 0xF94003E1U);
+                    }
+                    EmitStackCleanup(out, discarded);
+                    if (target.result_count != 0U && discarded != 0U) {
+                        AppendWord(out, 0xF90003E1U);
+                    }
+                    target.branches.push_back(out.size());
+                    AppendWord(out, 0x14000000U);
                 }
-                EmitStackCleanup(out, discarded);
-                if (target.result_count != 0U && discarded != 0U) {
-                    AppendWord(out, 0xF90003E1U);
-                }
-                target.branches.push_back(out.size());
-                AppendWord(out, 0x14000000U);
             }
-
             if (conditional && !PatchCBZW1(out, skip_pos, out.size())) {
                 return {};
             }
