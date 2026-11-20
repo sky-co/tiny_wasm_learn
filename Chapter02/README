@@ -55,6 +55,40 @@ echo 'mov rax, [rdi]' | as -o /tmp/t.o --64 && objdump -d /tmp/t.o
 echo 'ldr x1, [x0]' | aarch64-linux-gnu-as -o /tmp/t.o && aarch64-linux-gnu-objdump -d /tmp/t.o
 
 
+#### PushStack 解析
+```cpp
+inline void PushStack(std::vector<uint8_t> &out) {
+    AppendWord(out, 0xD10043FFU);
+    AppendWord(out, 0xF90003E1U);
+}
+```
+
+对应的汇编：
+
+| 机器码 | 汇编 | 含义 |
+|---|---|---|
+| `0xD10043FF` | `sub sp, sp, #16` | 栈指针向低地址移动 16 字节，分配一个栈槽 |
+| `0xF90003E1` | `str x1, [sp]` | 将 `x1` 的 64 位值写入新栈顶 |
+
+栈是向低地址增长的，栈顶由 `sp` 指向。每次压栈，`sp` 减小；每次弹栈，`sp` 增加。
+
+例如原先 `sp = 0x1000`、`x1 = 42`，执行后：
+
+```text
+sp = 0x0FF0
+
+地址          内容
+0x0FF0        42（8 字节） ← 新栈顶
+0x0FF8        未使用（8 字节）
+0x1000        原栈顶
+```
+
+**为什么存 8 字节，却分配 16 字节？**
+为了保持 AArch64 要求的 **16 字节栈对齐**。当前实现统一让每个 Wasm 操作数占用一个 16 字节栈槽，即使它是 `i32`。
+
+另外要区分：调用这个 C++ 函数时，只是把机器码追加到 `out`；**真正的压栈发生在之后执行 JIT 机器码时**。
+
+
 ### 小结
 - Wasm 的槽位顺序是先参数、后局部变量。
 - ldr x1, [x0, #pimm] 的不同写法。index 是 Wasm 槽下标，pimm 是它对应的字节偏移。

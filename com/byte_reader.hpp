@@ -253,6 +253,8 @@ class ByteReader {
                     std::cout << " I64.Eqz opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::I32_EQ) {
                     std::cout << " I32.Eq opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I64_GT_U) {
+                    std::cout << " I64.Gt_U opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::LOOP) {
                     const int8_t loop_type = static_cast<int8_t>(ReadU8());
                     std::cout << " Loop opcode " << static_cast<unsigned>(opcode);

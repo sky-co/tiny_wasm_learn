@@ -343,6 +343,19 @@ inline void EmitEq(std::vector<uint8_t> &out, vb::OPCode op) {
     AppendWord(out, 0xF90003E1U); // str x1, [sp]
 }
 
+inline void EmitGtU(std::vector<uint8_t> &out, vb::OPCode op) {
+    LoadStack(out);
+    if (op == vb::OPCode::I32_GT_U) {
+        AppendWord(out, 0x6B02003FU); // cmp w1, w2
+        AppendWord(out, 0x1A9F17E1U); // cset w1, gt
+    } else if (op == vb::OPCode::I64_GT_U) {
+        AppendWord(out, 0xEB02003FU); // cmp x1, x2
+        AppendWord(out, 0x1A9F97E1U); // cset w1, hi
+    }
+
+    AppendWord(out, 0xF90003E1U); // str x1, [sp]
+}
+
 inline size_t EmitLoop(std::vector<uint8_t> &out) {
     AppendWord(out, 0xB94003E1U); // ldr x1, [sp]
     AppendWord(out, 0x910043FFU); // mov xzr, x1
@@ -464,6 +477,10 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
             break;
         case vb::OPCode::I32_EQ:
             EmitEq(out, instr.opcode);
+            --stack_depth;
+            break;
+        case vb::OPCode::I64_GT_U:
+            EmitGtU(out, instr.opcode);
             --stack_depth;
             break;
         case vb::OPCode::IF:
