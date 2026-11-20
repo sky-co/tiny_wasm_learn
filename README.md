@@ -32,3 +32,9 @@ Promote understanding words
 ```text
 请帮我解析本章的学习目标和分解需要完成的任务，并提供建议、工具和最佳实践
 ```
+
+## Block points
+- 如何从wasm源码映射到ARM64汇编
+- 如何高效debug（Emit了机器码后，如何定位问题）
+- 细节（如字节对齐， 控制流处理）
+- Learning和实际工程的差异与联系
