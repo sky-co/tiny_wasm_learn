@@ -38,3 +38,17 @@ Promote understanding words
 - 如何高效debug（Emit了机器码后，如何定位问题）
 - 细节（如字节对齐， 控制流处理）
 - Learning和实际工程的差异与联系
+
+## Browser toolbox
+
+Requirements: Node.js >= 18.17, WABT, LLVM, AArch64 binutils, and a modern browser.
+On Ubuntu/Debian, install the command-line dependencies from the repository root:
+
+```shell
+bash tooling/install_dependencies.sh
+```
+
+Use `bash tooling/install_dependencies.sh --check` to verify without installing.
+Then run `node tooling/server.mjs` and open <http://127.0.0.1:8080/wasm_interpreter.html>
+for WAST conversion, Wasm disassembly, and AArch64 assembly/disassembly.
+See the [toolbox guide](tooling/README.md) for dependencies and usage.

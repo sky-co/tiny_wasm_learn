@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebAssembly / AArch64 Toolbox</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #17243b; background: #f0f4fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0 auto; max-width: 1440px; padding: 28px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 0 0 16px; font-size: 19px; }
+    p, label { line-height: 1.6; }
+    .intro, .hint { color: #526179; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    section { padding: 22px; background: white; border: 1px solid #d6dfec; border-radius: 12px; }
+    label { display: block; margin: 12px 0 6px; font-weight: 600; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #9aabc2; border-radius: 6px; font: 14px ui-monospace, monospace; }
+    textarea { min-height: 76px; resize: vertical; }
+    button { padding: 10px 16px; border: 0; border-radius: 6px; background: #1958bb; color: white; cursor: pointer; font-weight: 600; }
+    button:disabled { opacity: .5; cursor: wait; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; align-items: center; }
+    pre { margin: 12px 0 0; padding: 14px; min-height: 90px; max-height: 380px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #101d32; color: #deebff; border-radius: 6px; font: 13px/1.6 ui-monospace, monospace; }
+    pre.error { color: #ffb9b9; }
+    .hint { font-size: 13px; margin-bottom: 0; overflow-wrap: anywhere; }
+    @media (max-width: 800px) { body { padding: 16px; } .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>WebAssembly / AArch64 Toolbox</h1>
+  <p class="intro">WAST conversion, Wasm disassembly, and AArch64 assembly/disassembly. Connects only to the local service.</p>
+  <div class="grid">
+    <section>
+      <h2>1. wast2json</h2>
+      <label for="source">Local path or remote URL</label>
+      <input id="source" placeholder="Chapter02/local.wast" value="Chapter02/local.wast" spellcheck="false">
+      <p class="hint">Paths are relative to the project root. Supports .wast / .wat / .wasm files and HTTP(S) URLs.</p>
+      <div class="actions"><button id="convert">wast2json</button></div>
+      <p class="hint">Local conversion creates or overwrites the matching JSON and numbered Wasm files next to the source. Remote files are saved in the service's temporary directory.</p>
+      <pre id="convert-output" role="status" aria-live="polite">Ready to convert.</pre>
+    </section>
+    <section>
+      <h2>2. wasm-objdump</h2>
+      <label for="module">Generated modules</label>
+      <select id="module"><option value="">Convert a WAST file first, or enter a Wasm path below</option></select>
+      <label for="wasm-source">Wasm path / URL (leave empty to use the selected module)</label>
+      <input id="wasm-source" placeholder="Chapter02/local.0.wasm" spellcheck="false">
+      <div class="actions"><button id="objdump">wasm-objdump</button></div>
+      <pre id="objdump-output" role="status" aria-live="polite">Output from wasm-objdump -d -x will appear here.</pre>
+    </section>
+    <section>
+      <h2>3. AArch64 Disassembler</h2>
+      <label for="machine-code">32-bit instruction word</label>
+      <input id="machine-code" value="0xD10043FFU" spellcheck="false">
+      <p class="hint">Enter 8 hexadecimal digits, optionally prefixed with 0x and suffixed with U. Automatically converts to little-endian bytes.</p>
+      <div class="actions"><button id="disassemble">Disassembler</button></div>
+      <pre id="disassemble-output" role="status" aria-live="polite">Ready to disassemble.</pre>
+    </section>
+    <section>
+      <h2>4. AArch64 Assembler</h2>
+      <label for="instruction">Single assembly instruction</label>
+      <input id="instruction" value="sub sp, sp, #0x10" spellcheck="false">
+      <p class="hint">Uses llvm-mc to display little-endian bytes and the 32-bit instruction word with a U suffix.</p>
+      <div class="actions"><button id="assemble">Assembler</button></div>
+      <pre id="assemble-output" role="status" aria-live="polite">Ready to assemble.</pre>
+    </section>
+  </div>
+  <script>
+    const $ = id => document.getElementById(id);
+    function display(id, value, error = false) {
+      $(id).textContent = value;
+      $(id).classList.toggle('error', error);
+    }
+    async function api(action, data) {
+      const response = await fetch(`/api/${action}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      return result;
+    }
+    function bind(id, output, handler) {
+      $(id).addEventListener('click', async () => {
+        $(id).disabled = true;
+        display(output, 'Processing...');
+        try { await handler(); }
+        catch (error) { display(output, error.message, true); }
+        finally { $(id).disabled = false; }
+      });
+    }
+    function wasmSource() {
+      const source = $('wasm-source').value.trim() || $('module').value
+        || $('source').value.trim();
+      if (!source) throw new Error('Enter a Wasm path or select a module.');
+      return source;
+    }
+    bind('convert', 'convert-output', async () => {
+      $('module').replaceChildren(new Option('No modules available. Complete a conversion first.', ''));
+      const result = await api('convert', { source: $('source').value });
+      $('module').replaceChildren(...result.modules.map(name => new Option(name, name)));
+      if (!result.modules.length) $('module').add(new Option('No modules generated for disassembly', ''));
+      $('wasm-source').value = '';
+      display('convert-output', [
+        result.jsonPath ? `JSON: ${result.jsonPath}` : result.output,
+        `Module count: ${result.modules.length}`,
+        result.jsonPath ? result.output : '',
+        result.manifest ? JSON.stringify(result.manifest, null, 2) : '',
+      ].filter(Boolean).join('\n'));
+    });
+    bind('objdump', 'objdump-output', async () => {
+      const result = await api('objdump', { source: wasmSource() });
+      display('objdump-output', result.output);
+    });
+    bind('disassemble', 'disassemble-output', async () => {
+      const result = await api('disassemble', { code: $('machine-code').value });
+      display('disassemble-output', `Little-endian bytes: ${result.bytes}\n\n${result.output}`);
+    });
+    bind('assemble', 'assemble-output', async () => {
+      const result = await api('assemble', { instruction: $('instruction').value });
+      display('assemble-output', `Little-endian bytes: ${result.bytes}\nInstruction word: ${result.word}\n\n${result.output}`);
+    });
+    if (location.protocol === 'file:') {
+      display('convert-output', 'Run node tooling/server.mjs, then open http://127.0.0.1:1818. Opening the HTML file directly cannot invoke local commands.', true);
+    }
+  </script>
+</body>
+</html>
