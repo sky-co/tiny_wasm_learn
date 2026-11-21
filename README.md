@@ -49,6 +49,16 @@ bash tooling/install_dependencies.sh
 ```
 
 Use `bash tooling/install_dependencies.sh --check` to verify without installing.
-Then run `node tooling/server.mjs` and open <http://127.0.0.1:8080/wasm_interpreter.html>
-for WAST conversion, Wasm disassembly, and AArch64 assembly/disassembly.
+Then run `node tooling/server.mjs` and open <http://127.0.0.1:1818/wasm_interpreter.html>
+for WAST conversion, Wasm disassembly, AArch64 assembly/disassembly, and binary-to-hex conversion.
+
+In **5. AArch64 Binary to Hex**, enter one `0` or `1` in each of the 32 boxes,
+ordered from bit 31 (most significant) to bit 0 (least significant), matching the ARM encoding diagrams.
+Click **translate** to show one hexadecimal digit per four bits and the complete
+8-digit instruction word below, for example `0xD10043FF`.
+Click **reset** next to **translate** to fill all 32 boxes with `0`, reset all eight
+hexadecimal digits to `0`, clear validation errors, and immediately display `0x00000000`.
+This conversion runs entirely in the browser and also works when opening
+[wasm_interpreter.html](tooling/wasm_interpreter.html) directly, without the local service.
+
 See the [toolbox guide](tooling/README.md) for dependencies and usage.

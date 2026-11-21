@@ -31,7 +31,7 @@ test('toolbox integration with installed command-line tools', async t => {
     const response = await fetch(`${base}/wasm_interpreter.html`);
     assert.equal(response.status, 200);
     const html = await response.text();
-    assert.equal([...html.matchAll(/<section>/g)].length, 4);
+    assert.equal([...html.matchAll(/<section(?:\s[^>]*)?>/g)].length, 5);
     assert.doesNotMatch(html, /wasm-worker|runtime-output/);
     assert.match(html, /<html lang="en">/);
     assert.doesNotMatch(html, /\p{Script=Han}/u);

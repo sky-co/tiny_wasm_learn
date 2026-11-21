@@ -23,7 +23,16 @@
     pre { margin: 12px 0 0; padding: 14px; min-height: 90px; max-height: 380px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #101d32; color: #deebff; border-radius: 6px; font: 13px/1.6 ui-monospace, monospace; }
     pre.error { color: #ffb9b9; }
     .hint { font-size: 13px; margin-bottom: 0; overflow-wrap: anywhere; }
+    .binary-translator { grid-column: 1 / -1; }
+    .bit-groups { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .bit-group { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 8px; border: 1px solid #d6dfec; border-radius: 6px; }
+    .bit-group label { margin: 0; text-align: center; font: 12px/1.6 ui-monospace, monospace; color: #526179; }
+    .bit-group input { padding: 8px 0; text-align: center; }
+    .bit-group input[aria-invalid="true"] { border-color: #b42318; }
+    .nibble-hex { grid-column: 1 / -1; text-align: center; padding-top: 8px; font: 600 18px ui-monospace, monospace; }
+    @media (max-width: 1200px) { .bit-groups { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
     @media (max-width: 800px) { body { padding: 16px; } .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 500px) { .bit-groups { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -63,6 +72,14 @@
       <p class="hint">Uses llvm-mc to display little-endian bytes and the 32-bit instruction word with a U suffix.</p>
       <div class="actions"><button id="assemble">Assembler</button></div>
       <pre id="assemble-output" role="status" aria-live="polite">Ready to assemble.</pre>
+    </section>
+    <section class="binary-translator" aria-labelledby="binary-title">
+      <h2 id="binary-title">5. AArch64 Binary to Hex</h2>
+      <p class="hint" id="binary-hint">Enter one 0 or 1 in every box, then click translate. Bits run from 31 (most significant) to 0 (least significant), matching the ARM encoding diagrams. Each group of four bits produces one hexadecimal digit.</p>
+      <div id="bit-groups" class="bit-groups" role="group" aria-label="32-bit instruction" aria-describedby="binary-hint"></div>
+      <div class="actions"><button id="translate">translate</button><button id="reset">reset</button></div>
+      <label id="binary-output-label">32-bit instruction word (hexadecimal)</label>
+      <pre id="binary-output" role="status" aria-live="polite" aria-labelledby="binary-output-label">Fill all 32 bits and click translate.</pre>
     </section>
   </div>
   <script>
@@ -118,6 +135,65 @@
     bind('assemble', 'assemble-output', async () => {
       const result = await api('assemble', { instruction: $('instruction').value });
       display('assemble-output', `Little-endian bytes: ${result.bytes}\nInstruction word: ${result.word}\n\n${result.output}`);
+    });
+    const nibbleOutputs = [];
+    for (let high = 31; high >= 3; high -= 4) {
+      const group = document.createElement('div');
+      group.className = 'bit-group';
+      for (let bit = high; bit > high - 4; bit--) {
+        const label = document.createElement('label');
+        label.textContent = bit;
+        const input = document.createElement('input');
+        input.id = `bit-${bit}`;
+        input.type = 'text';
+        input.inputMode = 'numeric';
+        input.maxLength = 1;
+        input.pattern = '[01]';
+        input.autocomplete = 'off';
+        input.setAttribute('aria-label', `Bit ${bit}`);
+        label.append(input);
+        group.append(label);
+      }
+      const output = document.createElement('output');
+      output.className = 'nibble-hex';
+      output.setAttribute('aria-label', `Hexadecimal for bits ${high} to ${high - 3}`);
+      output.textContent = '-';
+      nibbleOutputs.push(output);
+      group.append(output);
+      $('bit-groups').append(group);
+    }
+    const bitInputs = [...$('bit-groups').querySelectorAll('input')];
+    $('reset').addEventListener('click', () => {
+      for (const input of bitInputs) {
+        input.value = '0';
+        input.removeAttribute('aria-invalid');
+      }
+      for (const output of nibbleOutputs) output.textContent = '0';
+      display('binary-output', '0x00000000');
+    });
+    $('bit-groups').addEventListener('input', () => {
+      for (const output of nibbleOutputs) output.textContent = '-';
+      for (const input of bitInputs) input.removeAttribute('aria-invalid');
+      display('binary-output', 'Fill all 32 bits and click translate.');
+    });
+    bind('translate', 'binary-output', () => {
+      let firstInvalid;
+      for (const input of bitInputs) {
+        const valid = /^[01]$/.test(input.value);
+        input.setAttribute('aria-invalid', String(!valid));
+        if (!valid && !firstInvalid) firstInvalid = input;
+      }
+      if (firstInvalid) {
+        firstInvalid.focus();
+        throw new Error('Fill all 32 bits with exactly one 0 or 1 per box.');
+      }
+      const bits = bitInputs.map(input => input.value).join('');
+      const hex = nibbleOutputs.map((output, index) => {
+        const digit = parseInt(bits.slice(index * 4, index * 4 + 4), 2).toString(16).toUpperCase();
+        output.textContent = digit;
+        return digit;
+      }).join('');
+      display('binary-output', `0x${hex}`);
     });
     if (location.protocol === 'file:') {
       display('convert-output', 'Run node tooling/server.mjs, then open http://127.0.0.1:1818. Opening the HTML file directly cannot invoke local commands.', true);
