@@ -182,6 +182,22 @@ inline void PushStack(std::vector<uint8_t> &out) {
     AppendWord(out, 0xF90003E1U);
 }
 
+inline void EmitLocalGet(std::vector<uint8_t> &out, uint32_t index) {
+    EmitLoadLocal(out, index);
+    PushStack(out);
+}
+
+inline void EmitLocalSet(std::vector<uint8_t> &out, uint32_t index) {
+    AppendWord(out, 0xF94003E1U);
+    AppendWord(out, 0x910043FFU);
+    EmitStoreLocal(out, index);
+}
+
+inline void EmitLocalTee(std::vector<uint8_t> &out, uint32_t index) {
+    AppendWord(out, 0xF94003E1U);
+    EmitStoreLocal(out, index);
+}
+
 inline void LoadStack(std::vector<uint8_t> &out) {
     AppendWord(out, 0xF94003E2U);
     AppendWord(out, 0x910043FFU);
@@ -413,19 +429,15 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
     for (const Instruction &instr : func.body) {
         switch (instr.opcode) {
         case vb::OPCode::LOCAL_GET:
-            EmitLoadLocal(out, instr.index);
-            PushStack(out);
+            EmitLocalGet(out, instr.index);
             ++stack_depth;
             break;
         case vb::OPCode::LOCAL_SET:
-            AppendWord(out, 0xF94003E1U);
-            AppendWord(out, 0x910043FFU);
-            EmitStoreLocal(out, instr.index);
+            EmitLocalSet(out, instr.index);
             --stack_depth;
             break;
         case vb::OPCode::LOCAL_TEE:
-            AppendWord(out, 0xF94003E1U);
-            EmitStoreLocal(out, instr.index);
+            EmitLocalTee(out, instr.index);
             break;
         case vb::OPCode::I32_CONST:
         case vb::OPCode::I64_CONST:
