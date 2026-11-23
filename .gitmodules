@@ -1,0 +1,3 @@
+[submodule "tooling/wasm_arm64_utility"]
+	path = tooling/wasm_arm64_utility
+	url = https://github.com/sky-co/wasm_arm64_utility.git

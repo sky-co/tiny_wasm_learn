@@ -41,15 +41,23 @@ Promote understanding words
 
 ## Browser toolbox
 
+The [WebAssembly / AArch64 Toolkit](https://github.com/sky-co/wasm_arm64_utility)
+is included as a submodule in [tooling/wasm_arm64_utility](tooling/wasm_arm64_utility).
+After cloning this repository, initialize it with:
+
+```shell
+git submodule update --init --recursive
+```
+
 Requirements: Node.js >= 18.17, WABT, LLVM, AArch64 binutils, and a modern browser.
 On Ubuntu/Debian, install the command-line dependencies from the repository root:
 
 ```shell
-bash tooling/install_dependencies.sh
+bash tooling/wasm_arm64_utility/install_dependencies.sh
 ```
 
-Use `bash tooling/install_dependencies.sh --check` to verify without installing.
-Then run `node tooling/server.mjs` and open <http://127.0.0.1:1818/wasm_interpreter.html>
+Use `bash tooling/wasm_arm64_utility/install_dependencies.sh --check` to verify without installing.
+Then run `node tooling/wasm_arm64_utility/server.mjs` and open <http://127.0.0.1:1818/wasm_interpreter.html>
 for WAST conversion, Wasm disassembly, AArch64 assembly/disassembly, and binary-to-hex conversion.
 
 In **5. AArch64 Binary to Hex**, enter one `0` or `1` in each of the 32 boxes,
@@ -59,6 +67,6 @@ Click **translate** to show one hexadecimal digit per four bits and the complete
 Click **reset** next to **translate** to fill all 32 boxes with `0`, reset all eight
 hexadecimal digits to `0`, clear validation errors, and immediately display `0x00000000`.
 This conversion runs entirely in the browser and also works when opening
-[wasm_interpreter.html](tooling/wasm_interpreter.html) directly, without the local service.
+[wasm_interpreter.html](tooling/wasm_arm64_utility/wasm_interpreter.html) directly, without the local service.
 
-See the [toolbox guide](tooling/README.md) for dependencies and usage.
+See the [toolbox guide](tooling/wasm_arm64_utility/README.md) for dependencies and usage.
