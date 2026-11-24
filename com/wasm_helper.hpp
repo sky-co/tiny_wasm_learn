@@ -476,6 +476,7 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
             --stack_depth;
             break;
         case vb::OPCode::I32_LE_U:
+        case vb::OPCode::I64_LE_U:
             EmitLeU(out, instr.opcode);
             --stack_depth;
             break;
