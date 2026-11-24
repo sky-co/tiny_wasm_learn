@@ -1,0 +1,40 @@
+Compile
+
+## Convert the local.wast to wasm and json with wast2json
+wast2json: https://github.com/WebAssembly/wabt/blob/main/docs/wast2json.md
+
+```shell
+$ wast2json chapter08.wast -o chapter08.json
+```
+
+```shell
+$ wasm-objdump -d -x chapter08.0.wasm
+```
+
+## Debug with aarch64-linux
+```shell
+$ aarch64-linux-gnu-g++ -std=c++17 -Wall -Wextra -O0 -g chapter08_main.cpp -o loop
+$ qemu-aarch64 -L /usr/aarch64-linux-gnu ./loop
+
+$ qemu-aarch64 -g 2345 -L /usr/aarch64-linux-gnu ./loop
+vscode debug(F5)
+```
+
+### Build and test from the repository root
+```shell
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+$ cmake --build build --target loop
+ctest --test-dir build --output-on-failure -R chapter08_arm64_gtest
+```
+
+
+## References
+- bl video https://www.youtube.com/watch?v=W1_-fE_PVHI
+- bl spec https://support.arm.com/documentation/dui0801/l/A64-General-Instructions/BL--A64-
+- https://simplifycpp.org/articles/a0431/understanding-arm-64-bit-assembly-language-a-comprehensive-guide-to-instructions-and-machine-cod/
+- https://bbs.csdn.net/weixin_29169899/article/details/100612836
+- https://www.cnblogs.com/from-zero/p/16047321.html
+- https://www.cnblogs.com/from-zero/p/13752017.html
+
+
+## Tips
