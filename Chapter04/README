@@ -116,3 +116,7 @@ wasm-objdump -d build/ch04/if.0.wasm
 - **CI 同时检查功能和质量：**沿用 代码质量要求，加入第四章测试及前三章回归。ASan 可检查宿主 C++，但不会自动检测所有 JIT 指令中的内存错误。
 
 完成标准：**10 条现有断言通过，新增比较与嵌套测试通过，前三章无回归，CI 自动执行这些检查。**
+
+
+## References
+- https://www.geeksforgeeks.org/compiler-design/backpatching-in-compiler-design/

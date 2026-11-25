@@ -18,6 +18,7 @@ enum class TrapCode : int {
 };
 
 inline thread_local std::jmp_buf *g_wasm_trap_env = nullptr;
+inline thread_local const CompiledModule *g_active_module = nullptr;
 
 inline void RaiseTrap(TrapCode code) {
     if (g_wasm_trap_env != nullptr) {
@@ -30,7 +31,7 @@ template <typename T> inline T div(T lhs, T rhs) {
     return (lhs / rhs);
 }
 
-extern "C" inline uint64_t WasmDivHelper(uint64_t op, uint64_t lhs, uint64_t rhs) {
+inline uint64_t WasmDivHelper(uint64_t op, uint64_t lhs, uint64_t rhs) {
     if (rhs == 0U) {
         RaiseTrap(TrapCode::IntegerDivideByZero);
     }
@@ -64,6 +65,33 @@ extern "C" inline uint64_t WasmDivHelper(uint64_t op, uint64_t lhs, uint64_t rhs
 
     RaiseTrap(TrapCode::IntegerOverflow);
     UNREACHABLE(, "Unsupported opcode: " << static_cast<uint8_t>(div_kind));
+}
+
+inline uint64_t WasmCallHelper(uint64_t func_index, const uint64_t *stack_top, uint64_t arg_count) {
+    if (g_active_module == nullptr || func_index >= g_active_module->entries.size()) {
+        std::cout << "invalid call target index " << func_index << '\n';
+        std::abort();
+    }
+    const JitFunc &callee = g_active_module->entries[func_index];
+    if (callee.entry == nullptr) {
+        std::cout << "call target has no jit entry " << func_index << '\n';
+        std::abort();
+    }
+    if (arg_count != callee.params.size()) {
+        std::cout << "call arity mismatch target " << func_index << " expected " << callee.params.size() << " got " << arg_count << '\n';
+        std::abort();
+    }
+
+    const uint32_t slot_count = (callee.slot_count == 0U) ? 1U : callee.slot_count;
+    std::vector<uint64_t> slots(slot_count, 0U);
+    const uint8_t *const stack_bytes = reinterpret_cast<const uint8_t *>(stack_top); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+    for (size_t i = 0; i < arg_count; ++i) {
+        const size_t reversed = static_cast<size_t>(arg_count - 1U - i);
+        const uint64_t *const arg_ptr =
+            reinterpret_cast<const uint64_t *>(stack_bytes + (reversed * 16U)); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+        slots[i] = *arg_ptr;
+    }
+    return callee.entry(slots.data());
 }
 
 inline int ExpectedTrapCode(const Function &test) {
@@ -199,9 +227,9 @@ inline void EmitLocalTee(std::vector<uint8_t> &out, uint32_t index) {
 }
 
 inline void LoadStack(std::vector<uint8_t> &out) {
-    AppendWord(out, 0xF94003E2U);
-    AppendWord(out, 0x910043FFU);
-    AppendWord(out, 0xF94003E1U);
+    AppendWord(out, 0xF94003E2U); // ldr x2, [sp]
+    AppendWord(out, 0x910043FFU); // add sp, sp, #16 -> pop stack
+    AppendWord(out, 0xF94003E1U); // ldr x1, [sp]
 }
 
 inline void EmitAdd(std::vector<uint8_t> &out, vb::OPCode op) {
@@ -251,16 +279,9 @@ inline void EmitMul(std::vector<uint8_t> &out, vb::OPCode op) {
     AppendWord(out, 0xF90003E1U);
 }
 
-inline void EmitDiv(std::vector<uint8_t> &out, vb::OPCode op) {
-    const uint64_t div_kind = static_cast<uint64_t>(op);
-    // Load the division kind into x0
-    EmitMovXImm(out, 0U, div_kind);
-
-    // Load the operands to x1 and x2 from the stack.
-    LoadStack(out);
-
-    // Load the address of the WasmDivHelper function into x16
-    EmitMovXImm(out, 16U, reinterpret_cast<uint64_t>(&WasmDivHelper)); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+inline void CallHelperFun(std::vector<uint8_t> &out, uint64_t fun_addr) {
+    // Load the address of the helper function into x16
+    EmitMovXImm(out, 16U, fun_addr);
 
     // Save LR because blr overwrites x30 and this JIT function still needs it on final ret.
     AppendWord(out, 0xD10043FFU);
@@ -272,6 +293,17 @@ inline void EmitDiv(std::vector<uint8_t> &out, vb::OPCode op) {
     // Restore LR after returning from the helper function
     AppendWord(out, 0xF94003FEU);
     AppendWord(out, 0x910043FFU);
+}
+
+inline void EmitDiv(std::vector<uint8_t> &out, vb::OPCode op) {
+    const uint64_t div_kind = static_cast<uint64_t>(op);
+    // Load the division kind into x0
+    EmitMovXImm(out, 0U, div_kind);
+
+    // Load the operands to x1 and x2 from the stack.
+    LoadStack(out);
+
+    CallHelperFun(out, reinterpret_cast<uint64_t>(&WasmDivHelper)); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 
     // mov x1, x0
     AppendWord(out, 0xAA0003E1U);
@@ -421,7 +453,33 @@ inline void EmitReturn(std::vector<uint8_t> &out, const CompiledFunctions &func,
     AppendWord(out, 0xD65F03C0U);
 }
 
-inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
+inline bool EmitCall(std::vector<uint8_t> &out, const std::vector<CompiledFunctions> &functions, const Instruction &instr, size_t &stack_depth) {
+    if (instr.index >= functions.size()) {
+        std::cout << "invalid call function index " << instr.index << '\n';
+        return false;
+    }
+
+    const CompiledFunctions &callee = functions[instr.index];
+    const size_t arg_count = callee.params.size();
+    const size_t result_count = callee.results.size();
+
+    EmitMovXImm(out, 0U, instr.index);
+    AppendWord(out, 0x910003E1U); // mov x1, sp
+    EmitMovXImm(out, 2U, arg_count);
+
+    CallHelperFun(out, reinterpret_cast<uint64_t>(&WasmCallHelper)); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
+
+    EmitStackCleanup(out, arg_count);
+    stack_depth -= arg_count;
+    if (result_count != 0U) {
+        AppendWord(out, 0xAA0003E1U); // mov x1, x0
+        PushStack(out);
+        ++stack_depth;
+    }
+    return true;
+}
+
+inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func, const std::vector<CompiledFunctions> &functions) {
     std::vector<uint8_t> out;
     std::vector<ControlContext> control_stack;
     size_t stack_depth = 0U;
@@ -444,6 +502,11 @@ inline std::vector<uint8_t> CompileInstructions(const CompiledFunctions &func) {
             EmitMovX1Imm(out, static_cast<uint64_t>(instr.immediate));
             PushStack(out);
             ++stack_depth;
+            break;
+        case vb::OPCode::CALL:
+            if (!EmitCall(out, functions, instr, stack_depth)) {
+                return {};
+            }
             break;
         case vb::OPCode::I32_ADD:
         case vb::OPCode::I64_ADD:
@@ -629,7 +692,7 @@ inline void BindJITTable(const std::vector<ExpFunc> &exp, const std::vector<Comp
     std::vector<std::vector<uint8_t>> machine(module.functions.size());
     size_t bytes = 16U;
     for (size_t i = 0; i < module.functions.size(); ++i) {
-        machine[i] = CompileInstructions(module.functions[i]);
+        machine[i] = CompileInstructions(module.functions[i], module.functions);
         // 向上对齐到 16 字节
         bytes += (machine[i].size() + 15U) & ~15U;
     }
@@ -715,12 +778,14 @@ inline bool RunAssert(const Module &module, const CompiledModule &compiled) {
 
         std::jmp_buf env;
         g_wasm_trap_env = &env;
+        g_active_module = &compiled;
         const int trap_code = setjmp(env); // NOLINT(cert-err52-cpp)
         if (trap_code == 0) {
             const uint64_t result = jit.entry(slots.data());
             if (test.exp.args.size() == 0) {
                 std::cout << "PASS: " << test.act.field << '\n';
                 g_wasm_trap_env = nullptr;
+                g_active_module = nullptr;
                 continue;
             }
             const uint64_t expected = test.exp.args[0].value;
@@ -740,6 +805,7 @@ inline bool RunAssert(const Module &module, const CompiledModule &compiled) {
             }
         }
         g_wasm_trap_env = nullptr;
+        g_active_module = nullptr;
     }
     return res;
 }

@@ -194,6 +194,9 @@ class ByteReader {
                 instr.opcode = opcode;
                 if (opcode == vb::OPCode::LOCAL_GET || opcode == vb::OPCode::LOCAL_SET || opcode == vb::OPCode::LOCAL_TEE) {
                     instr.index = ReadU32Leb128();
+                } else if (opcode == vb::OPCode::CALL) {
+                    instr.index = ReadU32Leb128();
+                    std::cout << " Call opcode " << static_cast<unsigned>(opcode) << " idx " << instr.index;
                 } else if (opcode == vb::OPCode::I32_CONST) {
                     instr.immediate = ReadSignedLeb128(32U);
                 } else if (opcode == vb::OPCode::I64_CONST) {
@@ -201,18 +204,18 @@ class ByteReader {
                 } else if (opcode == vb::OPCode::I32_ADD) {
                     // i32.add
                     std::cout << " I32.Add opcode " << static_cast<unsigned>(opcode);
-                } else if (opcode == vb::OPCode::I32_SUB) {
-                    // i32.sub
-                    std::cout << " I32.Sub opcode " << static_cast<unsigned>(opcode);
-                } else if (opcode == vb::OPCode::I32_MUL) {
-                    // i32.mul
-                    std::cout << " I32.Mul opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::I64_ADD) {
                     // i64.add
                     std::cout << " I64.Add opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I32_SUB) {
+                    // i32.sub
+                    std::cout << " I32.Sub opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::I64_SUB) {
                     // i64.sub
                     std::cout << " I64.Sub opcode " << static_cast<unsigned>(opcode);
+                } else if (opcode == vb::OPCode::I32_MUL) {
+                    // i32.mul
+                    std::cout << " I32.Mul opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::I64_MUL) {
                     // i64.mul
                     std::cout << " I64.Mul opcode " << static_cast<unsigned>(opcode);
