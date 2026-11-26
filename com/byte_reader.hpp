@@ -233,11 +233,10 @@ class ByteReader {
                     std::cout << " I64.Div_U opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::IF) {
                     std::cout << " If opcode " << static_cast<unsigned>(opcode);
-                    const int8_t if_type = static_cast<int8_t>(ReadU8());
                     // Ox40 indicates an empty block type in WebAssembly
-                    instr.immediate = if_type;
+                    instr.immediate = static_cast<int8_t>(ReadU8());
                     ++block_depth;
-                    std::cout << " if-type " << static_cast<int32_t>(if_type);
+                    std::cout << " if-type " << static_cast<int32_t>(instr.immediate);
                 } else if (opcode == vb::OPCode::ELSE) {
                     std::cout << " ELSE opcode " << static_cast<unsigned>(opcode);
                 } else if (opcode == vb::OPCode::I32_LT_S) {

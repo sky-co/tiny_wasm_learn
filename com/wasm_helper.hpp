@@ -133,11 +133,11 @@ inline void AppendWord(std::vector<uint8_t> &out, uint32_t word) {
 }
 
 inline void EmitLoadLocal(std::vector<uint8_t> &out, uint32_t index) {
-    AppendWord(out, 0xF9400001U | (index << 10U));
+    AppendWord(out, 0xF9400001U | (index << 10U)); // ldr  x1, [x0， #index * 8]
 }
 
 inline void EmitStoreLocal(std::vector<uint8_t> &out, uint32_t index) {
-    AppendWord(out, 0xF9000001U | (index << 10U));
+    AppendWord(out, 0xF9000001U | (index << 10U)); // str  x1, [x0]
 }
 
 inline void EmitMovXImm(std::vector<uint8_t> &out, uint32_t reg, uint64_t imm) {
@@ -206,8 +206,8 @@ inline void EmitMovX1Imm(std::vector<uint8_t> &out, uint64_t imm) {
 }
 
 inline void PushStack(std::vector<uint8_t> &out) {
-    AppendWord(out, 0xD10043FFU);
-    AppendWord(out, 0xF90003E1U);
+    AppendWord(out, 0xD10043FFU); // sub  sp, sp, #0x10
+    AppendWord(out, 0xF90003E1U); // str  x1, [sp]
 }
 
 inline void EmitLocalGet(std::vector<uint8_t> &out, uint32_t index) {
@@ -410,13 +410,6 @@ inline size_t EmitLoop(std::vector<uint8_t> &out) {
     const size_t branch_pos = out.size();
     AppendWord(out, 0x34000001U);
     return branch_pos;
-}
-
-inline void EmitBRIf(std::vector<uint8_t> &out, size_t target_pos) {
-    // cbz w1, <target_pos>; imm19 is patched after the target is known.
-    const size_t branch_pos = out.size();
-    AppendWord(out, 0x34000001U);
-    PatchCBZW1(out, branch_pos, target_pos);
 }
 
 inline size_t EmitIF(std::vector<uint8_t> &out) {
@@ -693,7 +686,7 @@ inline void BindJITTable(const std::vector<ExpFunc> &exp, const std::vector<Comp
     size_t bytes = 16U;
     for (size_t i = 0; i < module.functions.size(); ++i) {
         machine[i] = CompileInstructions(module.functions[i], module.functions);
-        // 向上对齐到 16 字节
+        // 16 Bits alignment
         bytes += (machine[i].size() + 15U) & ~15U;
     }
     if (!module.code.Allocate(bytes)) {
