@@ -1,12 +1,24 @@
 (module
 
-  (func $const-i32 (result i32) (i32.const 0x132))
-  (func $const-i64 (result i64) (i64.const 0x164))
 
-  (func (export "type-i32") (result i32) (call $const-i32))
-  (func (export "type-i64") (result i64) (call $const-i64))
- )
+  (func $fib (export "fib") (param i64) (result i64)
+    (if (result i64) (i64.le_u (local.get 0) (i64.const 1))
+      (then (i64.const 1))
+      (else
+        (i64.add
+          (call $fib (i64.sub (local.get 0) (i64.const 2)))
+          (call $fib (i64.sub (local.get 0) (i64.const 1)))
+        )
+      )
+    )
+  )
+
+)
 
 
-(assert_return (invoke "type-i32") (i32.const 0x132))
-(assert_return (invoke "type-i64") (i64.const 0x164))
+
+(assert_return (invoke "fib" (i64.const 0)) (i64.const 1))
+(assert_return (invoke "fib" (i64.const 1)) (i64.const 1))
+(assert_return (invoke "fib" (i64.const 2)) (i64.const 2))
+(assert_return (invoke "fib" (i64.const 5)) (i64.const 8))
+(assert_return (invoke "fib" (i64.const 20)) (i64.const 10946))

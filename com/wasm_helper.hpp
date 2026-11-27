@@ -338,13 +338,13 @@ inline void EmitLeU(std::vector<uint8_t> &out, vb::OPCode op) {
     if (op == vb::OPCode::I32_LE_U) {
         // cmp w1, w2
         AppendWord(out, 0x6B02003FU);
-        // cset w1, le
-        AppendWord(out, 0x1A9FD7E1U);
+        // cset w1, ls
+        AppendWord(out, 0x1A9F87E1U);
     } else {
         // cmp x1, x2
         AppendWord(out, 0xEB02003FU);
-        // cset x1, le
-        AppendWord(out, 0x9A9FD7E1U);
+        // cset x1, ls
+        AppendWord(out, 0x9A9F87E1U);
     }
 
     // str x1, [sp]  用原 x 的栈槽保存结果

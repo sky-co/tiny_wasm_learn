@@ -27,6 +27,18 @@ $ cmake --build build --target loop
 ctest --test-dir build --output-on-failure -R chapter08_arm64_gtest
 ```
 
+## Tips
+In ARM64 (AArch64) assembly, le_u is not a native instruction, so you express an "unsigned less than or equal to" comparison using the ls (Lower or Same) condition code alongside instructions like cmp, b.ls, or cset.
+(Note: le_u is a standard numeric instruction in WebAssembly and intermediate representations like Cranelift/LLVM IR, which compilers lower to ARM64's ls condition).
+See https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Numeric/le_u
+
+Materialize a Boolean (cset): Sets a register to 1 if X0 <= X1, or 0 otherwise (matching WebAssembly's i64.le_u behavior).
+```
+armasm
+cmp  x0, x1       // Compare X0 and X1
+cset x2, ls       // X2 = 1 if X0 <= X1 (unsigned), else 0
+```
+
 
 ## References
 - bl video https://www.youtube.com/watch?v=W1_-fE_PVHI
@@ -36,6 +48,3 @@ ctest --test-dir build --output-on-failure -R chapter08_arm64_gtest
 - https://www.cnblogs.com/from-zero/p/16047321.html
 - https://www.cnblogs.com/from-zero/p/13752017.html
 - https://wasdk.github.io/wasmcodeexplorer/
-
-
-## Tips
